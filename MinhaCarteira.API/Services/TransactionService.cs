@@ -1,0 +1,302 @@
+using Microsoft.EntityFrameworkCore;
+using MinhaCarteira.API.Data;
+using MinhaCarteira.API.DTOs;
+using MinhaCarteira.API.Models;
+using MinhaCarteira.API.Repositories;
+
+namespace MinhaCarteira.API.Services;
+
+public class TransactionService : ITransactionService
+{
+  private readonly ApplicationDbContext _context;
+  private readonly IWalletService _walletService;
+  private readonly ITransactionRepository _transactionRepository;
+  private readonly IWalletRepository _walletRepository;
+
+  public TransactionService(ApplicationDbContext context, IWalletService walletService, ITransactionRepository transactionRepository, IWalletRepository walletRepository)
+  {
+    _context = context;
+    _walletService = walletService;
+    _transactionRepository = transactionRepository;
+    _walletRepository = walletRepository;
+  }
+
+  public async Task<IEnumerable<TransactionDTO>> GetUserTransactionsAsync(int userId, TransactionFilterDTO? filter = null)
+  {
+    var query = _context.Transactions
+      .Include(t => t.Wallet)
+      .Where(t => t.Wallet.UserId == userId);
+
+    if (filter != null)
+    {
+      if (filter.StartDate.HasValue)
+        query = query.Where(t => t.Date >= filter.StartDate.Value);
+
+      if (filter.EndDate.HasValue)
+        query = query.Where(t => t.Date <= filter.EndDate.Value);
+
+      if (filter.WalletId.HasValue)
+        query = query.Where(t => t.WalletId == filter.WalletId.Value);
+
+      if (!string.IsNullOrEmpty(filter.Type))
+        query = query.Where(t => t.Type.ToString() == filter.Type);
+    }
+
+    var transactions = await query
+      .OrderByDescending(t => t.Date)
+      .Select(t => new TransactionDTO
+      {
+        Id = t.Id,
+        Amount = t.Amount,
+        Description = t.Description,
+        Date = t.Date,
+        Type = t.Type.ToString(),
+        WalletId = t.WalletId,
+        WalletName = t.Wallet.Name
+      })
+      .ToListAsync();
+
+    return transactions;
+  }
+
+  public async Task<TransactionDTO?> GetTransactionAsync(int id, int userId)
+  {
+    var transaction = await _transactionRepository.GetByIdAsync(id);
+    if (transaction == null)
+    {
+      return null;
+    }
+
+    var wallet = await _walletRepository.GetByIdAsync(transaction.WalletId);
+    if (wallet == null || wallet.UserId != userId)
+    {
+      return null;
+    }
+
+    return new TransactionDTO
+    {
+      Id = transaction.Id,
+      Description = transaction.Description,
+      Amount = transaction.Amount,
+      Type = transaction.Type.ToString(),
+      WalletId = transaction.WalletId,
+      WalletName = wallet.Name,
+      DestinationWalletId = transaction.DestinationWalletId,
+      DestinationWalletName = transaction.DestinationWallet?.Name,
+      CreatedAt = transaction.CreatedAt,
+      UpdatedAt = transaction.UpdatedAt
+    };
+  }
+
+  public async Task<TransactionDTO> CreateTransactionAsync(CreateTransactionDTO createTransactionDto, int userId)
+  {
+    var wallet = await _walletRepository.GetByIdAsync(createTransactionDto.WalletId);
+    if (wallet == null || wallet.UserId != userId)
+    {
+      throw new InvalidOperationException("Carteira não encontrada");
+    }
+
+    if (createTransactionDto.Type == TransactionType.Transfer && createTransactionDto.DestinationWalletId.HasValue)
+    {
+      var destinationWallet = await _walletRepository.GetByIdAsync(createTransactionDto.DestinationWalletId.Value);
+      if (destinationWallet == null)
+      {
+        throw new InvalidOperationException("Carteira de destino não encontrada");
+      }
+
+      if (destinationWallet.Id == wallet.Id)
+      {
+        throw new InvalidOperationException("Não é possível transferir para a mesma carteira");
+      }
+    }
+
+    var transaction = new Transaction
+    {
+      Description = createTransactionDto.Description,
+      Amount = createTransactionDto.Amount,
+      Type = createTransactionDto.Type,
+      WalletId = createTransactionDto.WalletId,
+      DestinationWalletId = createTransactionDto.DestinationWalletId
+    };
+
+    await _transactionRepository.AddAsync(transaction);
+
+    switch (createTransactionDto.Type)
+    {
+      case TransactionType.Income:
+        wallet.Balance += createTransactionDto.Amount;
+        break;
+      case TransactionType.Expense:
+        if (wallet.Balance < createTransactionDto.Amount)
+        {
+          throw new InvalidOperationException("Saldo insuficiente");
+        }
+        wallet.Balance -= createTransactionDto.Amount;
+        break;
+      case TransactionType.Transfer:
+        if (wallet.Balance < createTransactionDto.Amount)
+        {
+          throw new InvalidOperationException("Saldo insuficiente");
+        }
+        wallet.Balance -= createTransactionDto.Amount;
+        if (createTransactionDto.DestinationWalletId.HasValue)
+        {
+          var destinationWallet = await _walletRepository.GetByIdAsync(createTransactionDto.DestinationWalletId.Value);
+          if (destinationWallet != null)
+          {
+            destinationWallet.Balance += createTransactionDto.Amount;
+            _walletRepository.Update(destinationWallet);
+          }
+        }
+        break;
+    }
+
+    _walletRepository.Update(wallet);
+    await _transactionRepository.SaveChangesAsync();
+
+    return new TransactionDTO
+    {
+      Id = transaction.Id,
+      Description = transaction.Description,
+      Amount = transaction.Amount,
+      Type = transaction.Type.ToString(),
+      WalletId = transaction.WalletId,
+      WalletName = wallet.Name,
+      DestinationWalletId = transaction.DestinationWalletId,
+      DestinationWalletName = transaction.DestinationWallet?.Name,
+      CreatedAt = transaction.CreatedAt,
+      UpdatedAt = transaction.UpdatedAt
+    };
+  }
+
+  public async Task UpdateTransactionAsync(int id, UpdateTransactionDTO updateTransactionDto, int userId)
+  {
+    var transaction = await _transactionRepository.GetByIdAsync(id);
+    if (transaction == null)
+    {
+      throw new InvalidOperationException("Transação não encontrada");
+    }
+
+    var wallet = await _walletRepository.GetByIdAsync(transaction.WalletId);
+    if (wallet == null || wallet.UserId != userId)
+    {
+      throw new InvalidOperationException("Carteira não encontrada");
+    }
+
+    transaction.Description = updateTransactionDto.Description;
+    transaction.UpdatedAt = DateTime.UtcNow;
+
+    _transactionRepository.Update(transaction);
+    await _transactionRepository.SaveChangesAsync();
+  }
+
+  public async Task DeleteTransactionAsync(int id, int userId)
+  {
+    var transaction = await _transactionRepository.GetByIdAsync(id);
+    if (transaction == null)
+    {
+      throw new InvalidOperationException("Transação não encontrada");
+    }
+
+    var wallet = await _walletRepository.GetByIdAsync(transaction.WalletId);
+    if (wallet == null || wallet.UserId != userId)
+    {
+      throw new InvalidOperationException("Carteira não encontrada");
+    }
+
+    switch (transaction.Type)
+    {
+      case TransactionType.Income:
+        wallet.Balance -= transaction.Amount;
+        break;
+      case TransactionType.Expense:
+        wallet.Balance += transaction.Amount;
+        break;
+      case TransactionType.Transfer:
+        wallet.Balance += transaction.Amount;
+        if (transaction.DestinationWalletId.HasValue)
+        {
+          var destinationWallet = await _walletRepository.GetByIdAsync(transaction.DestinationWalletId.Value);
+          if (destinationWallet != null)
+          {
+            destinationWallet.Balance -= transaction.Amount;
+            _walletRepository.Update(destinationWallet);
+          }
+        }
+        break;
+    }
+
+    _walletRepository.Update(wallet);
+    _transactionRepository.Remove(transaction);
+    await _transactionRepository.SaveChangesAsync();
+  }
+
+  public async Task<decimal> GetTotalIncomeAsync(int walletId)
+  {
+    return await _transactionRepository.GetTotalIncomeByWalletIdAsync(walletId);
+  }
+
+  public async Task<decimal> GetTotalExpenseAsync(int walletId)
+  {
+    return await _transactionRepository.GetTotalExpenseByWalletIdAsync(walletId);
+  }
+
+  public async Task<TransactionDTO> CreateTransferAsync(TransferDTO transferDto, int userId)
+  {
+    // Verificar se a carteira de origem pertence ao usuário
+    var sourceWallet = await _context.Wallets
+        .FirstOrDefaultAsync(w => w.Id == transferDto.SourceWalletId && w.UserId == userId);
+
+    if (sourceWallet == null)
+      throw new InvalidOperationException("Carteira de origem não encontrada ou não pertence ao usuário");
+
+    // Verificar se a carteira de destino existe
+    var destinationWallet = await _context.Wallets
+        .FirstOrDefaultAsync(w => w.Id == transferDto.DestinationWalletId);
+
+    if (destinationWallet == null)
+      throw new InvalidOperationException("Carteira de destino não encontrada");
+
+    // Verificar se há saldo suficiente
+    var currentBalance = await GetTotalIncomeAsync(sourceWallet.Id) - await GetTotalExpenseAsync(sourceWallet.Id);
+    if (currentBalance < transferDto.Amount)
+      throw new InvalidOperationException("Saldo insuficiente para realizar a transferência");
+
+    // Criar transação de saída na carteira de origem
+    var sourceTransaction = new Transaction
+    {
+      Amount = transferDto.Amount,
+      Description = $"Transferência para {destinationWallet.Name} (Usuário: {destinationWallet.User.Name}): {transferDto.Description}",
+      Date = DateTime.UtcNow,
+      Type = TransactionType.Expense,
+      WalletId = sourceWallet.Id,
+      CreatedAt = DateTime.UtcNow
+    };
+
+    // Criar transação de entrada na carteira de destino
+    var destinationTransaction = new Transaction
+    {
+      Amount = transferDto.Amount,
+      Description = $"Transferência de {sourceWallet.Name} (Usuário: {sourceWallet.User.Name}): {transferDto.Description}",
+      Date = DateTime.UtcNow,
+      Type = TransactionType.Income,
+      WalletId = destinationWallet.Id,
+      CreatedAt = DateTime.UtcNow
+    };
+
+    _context.Transactions.Add(sourceTransaction);
+    _context.Transactions.Add(destinationTransaction);
+    await _context.SaveChangesAsync();
+
+    return new TransactionDTO
+    {
+      Id = sourceTransaction.Id,
+      Amount = sourceTransaction.Amount,
+      Description = sourceTransaction.Description,
+      Date = sourceTransaction.Date,
+      Type = sourceTransaction.Type.ToString(),
+      WalletId = sourceTransaction.WalletId,
+      WalletName = sourceWallet.Name
+    };
+  }
+}
