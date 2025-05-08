@@ -18,6 +18,7 @@ API para gerenciamento de carteiras e transações financeiras.
 - PostgreSQL
 - JWT Authentication
 - Swagger/OpenAPI
+- ReDoc
 - Docker
 - Scalar (Documentação da API)
 
