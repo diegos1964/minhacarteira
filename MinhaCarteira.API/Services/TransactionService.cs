@@ -21,42 +21,29 @@ public class TransactionService : ITransactionService
     _walletRepository = walletRepository;
   }
 
-  public async Task<IEnumerable<TransactionDTO>> GetUserTransactionsAsync(int userId, TransactionFilterDTO? filter = null)
+  public async Task<PaginatedResultDTO<TransactionDTO>> GetUserTransactionsAsync(int userId, TransactionFilterDTO filter)
   {
-    var query = _context.Transactions
-      .Include(t => t.Wallet)
-      .Where(t => t.Wallet.UserId == userId);
+    var (transactions, totalCount) = await _transactionRepository.GetUserTransactionsAsync(userId, filter);
 
-    if (filter != null)
+    var items = transactions.Select(t => new TransactionDTO
     {
-      if (filter.StartDate.HasValue)
-        query = query.Where(t => t.Date >= filter.StartDate.Value);
+      Id = t.Id,
+      Amount = t.Amount,
+      Description = t.Description,
+      Date = t.Date,
+      Type = t.Type.ToString(),
+      WalletId = t.WalletId,
+      WalletName = t.Wallet.Name
+    });
 
-      if (filter.EndDate.HasValue)
-        query = query.Where(t => t.Date <= filter.EndDate.Value);
-
-      if (filter.WalletId.HasValue)
-        query = query.Where(t => t.WalletId == filter.WalletId.Value);
-
-      if (!string.IsNullOrEmpty(filter.Type))
-        query = query.Where(t => t.Type.ToString() == filter.Type);
-    }
-
-    var transactions = await query
-      .OrderByDescending(t => t.Date)
-      .Select(t => new TransactionDTO
-      {
-        Id = t.Id,
-        Amount = t.Amount,
-        Description = t.Description,
-        Date = t.Date,
-        Type = t.Type.ToString(),
-        WalletId = t.WalletId,
-        WalletName = t.Wallet.Name
-      })
-      .ToListAsync();
-
-    return transactions;
+    return new PaginatedResultDTO<TransactionDTO>
+    {
+      Items = items,
+      TotalItems = totalCount,
+      PageNumber = filter.PageNumber,
+      PageSize = filter.PageSize,
+      TotalPages = (int)Math.Ceiling(totalCount / (double)filter.PageSize)
+    };
   }
 
   public async Task<TransactionDTO?> GetTransactionAsync(int id, int userId)

@@ -8,6 +8,7 @@ using MinhaCarteira.API.Repositories;
 using System.Text;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -26,6 +27,7 @@ builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
 
 // Configure JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -58,13 +60,12 @@ builder.Services.AddSwaggerGen(c =>
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
         Name = "Authorization",
         In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT"
     });
 
     c.OperationFilter<AuthorizeCheckOperationFilter>();
-
-    c.EnableAnnotations();
 });
 
 var app = builder.Build();

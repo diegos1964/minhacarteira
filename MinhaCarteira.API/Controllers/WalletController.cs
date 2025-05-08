@@ -18,75 +18,79 @@ public class WalletController : ControllerBase
   }
 
   [HttpGet]
-  public async Task<ActionResult<IEnumerable<WalletDTO>>> GetWallets()
+  public async Task<ActionResult<ApiResponse<PaginatedResultDTO<WalletDTO>>>> GetWallets([FromQuery] WalletFilterDTO? filter)
   {
     var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
-    var wallets = await _walletService.GetUserWalletsAsync(userId);
-    return Ok(wallets);
+    var wallets = await _walletService.GetUserWalletsAsync(userId, filter ?? new WalletFilterDTO());
+    return Ok(ApiResponse<PaginatedResultDTO<WalletDTO>>.CreateSuccess(wallets, "Carteiras recuperadas com sucesso"));
   }
 
   [HttpGet("{id}")]
-  public async Task<ActionResult<WalletDTO>> GetWallet(int id)
+  public async Task<ActionResult<ApiResponse<WalletDTO>>> GetWallet(int id)
   {
     var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
     var wallet = await _walletService.GetWalletAsync(id, userId);
     if (wallet == null)
     {
-      return NotFound();
+      return NotFound(ApiResponse<WalletDTO>.CreateError("Carteira não encontrada"));
     }
-    return Ok(wallet);
+    return Ok(ApiResponse<WalletDTO>.CreateSuccess(wallet, "Carteira recuperada com sucesso"));
   }
 
   [HttpPost]
-  public async Task<ActionResult<WalletDTO>> CreateWallet(CreateWalletDTO createWalletDto)
+  public async Task<ActionResult<ApiResponse<WalletDTO>>> CreateWallet(CreateWalletDTO createWalletDto)
   {
     try
     {
       var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
       var wallet = await _walletService.CreateWalletAsync(createWalletDto, userId);
-      return CreatedAtAction(nameof(GetWallet), new { id = wallet.Id }, wallet);
+      return CreatedAtAction(
+        nameof(GetWallet),
+        new { id = wallet.Id },
+        ApiResponse<WalletDTO>.CreateSuccess(wallet, "Carteira criada com sucesso")
+      );
     }
     catch (InvalidOperationException ex)
     {
-      return BadRequest(new { message = ex.Message });
+      return BadRequest(ApiResponse<WalletDTO>.CreateError(ex.Message));
     }
   }
 
   [HttpPut("{id}")]
-  public async Task<IActionResult> UpdateWallet(int id, UpdateWalletDTO updateWalletDto)
+  public async Task<ActionResult<ApiResponse<object>>> UpdateWallet(int id, UpdateWalletDTO updateWalletDto)
   {
     try
     {
       var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
       await _walletService.UpdateWalletAsync(id, updateWalletDto, userId);
-      return NoContent();
+      return Ok(ApiResponse<object>.CreateSuccess(null, "Carteira atualizada com sucesso"));
     }
     catch (InvalidOperationException ex)
     {
-      return BadRequest(new { message = ex.Message });
+      return BadRequest(ApiResponse<object>.CreateError(ex.Message));
     }
   }
 
   [HttpDelete("{id}")]
-  public async Task<IActionResult> DeleteWallet(int id)
+  public async Task<ActionResult<ApiResponse<object>>> DeleteWallet(int id)
   {
     try
     {
       var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
       await _walletService.DeleteWalletAsync(id, userId);
-      return NoContent();
+      return Ok(ApiResponse<object>.CreateSuccess(null, "Carteira excluída com sucesso"));
     }
     catch (InvalidOperationException ex)
     {
-      return BadRequest(new { message = ex.Message });
+      return BadRequest(ApiResponse<object>.CreateError(ex.Message));
     }
   }
 
   [HttpGet("balance")]
-  public async Task<ActionResult<decimal>> GetTotalBalance()
+  public async Task<ActionResult<ApiResponse<decimal>>> GetTotalBalance()
   {
     var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
     var balance = await _walletService.GetTotalBalanceAsync(userId);
-    return Ok(balance);
+    return Ok(ApiResponse<decimal>.CreateSuccess(balance, "Saldo total recuperado com sucesso"));
   }
 }

@@ -10,9 +10,9 @@ public class ApplicationDbContext : DbContext
   {
   }
 
-  public DbSet<User> Users { get; set; }
-  public DbSet<Wallet> Wallets { get; set; }
-  public DbSet<Transaction> Transactions { get; set; }
+  public DbSet<User> Users { get; set; } = null!;
+  public DbSet<Wallet> Wallets { get; set; } = null!;
+  public DbSet<Transaction> Transactions { get; set; } = null!;
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
@@ -20,27 +20,38 @@ public class ApplicationDbContext : DbContext
 
     modelBuilder.Entity<User>(entity =>
     {
+      entity.HasKey(e => e.Id);
+      entity.Property(e => e.Email).IsRequired().HasMaxLength(100);
+      entity.Property(e => e.PasswordHash).IsRequired();
+      entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
       entity.HasIndex(e => e.Email).IsUnique();
     });
 
     modelBuilder.Entity<Wallet>(entity =>
     {
-      entity.HasOne(w => w.User)
+      entity.HasKey(e => e.Id);
+      entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+      entity.Property(e => e.Balance).HasPrecision(18, 2);
+      entity.HasOne(e => e.User)
               .WithMany(u => u.Wallets)
-              .HasForeignKey(w => w.UserId)
+              .HasForeignKey(e => e.UserId)
               .OnDelete(DeleteBehavior.Cascade);
     });
 
     modelBuilder.Entity<Transaction>(entity =>
     {
-      entity.HasOne(t => t.Wallet)
+      entity.HasKey(e => e.Id);
+      entity.Property(e => e.Description).IsRequired().HasMaxLength(200);
+      entity.Property(e => e.Amount).HasPrecision(18, 2);
+      entity.Property(e => e.Type).IsRequired();
+      entity.Property(e => e.Date).IsRequired();
+      entity.HasOne(e => e.Wallet)
               .WithMany(w => w.Transactions)
-              .HasForeignKey(t => t.WalletId)
+              .HasForeignKey(e => e.WalletId)
               .OnDelete(DeleteBehavior.Cascade);
-
-      entity.HasOne(t => t.DestinationWallet)
+      entity.HasOne(e => e.DestinationWallet)
               .WithMany()
-              .HasForeignKey(t => t.DestinationWalletId)
+              .HasForeignKey(e => e.DestinationWalletId)
               .OnDelete(DeleteBehavior.Restrict);
     });
   }

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MinhaCarteira.API.Data;
 using MinhaCarteira.API.Models;
+using System.Linq.Expressions;
 
 namespace MinhaCarteira.API.Repositories;
 
@@ -20,5 +21,10 @@ public class UserRepository : BaseRepository<User>, IUserRepository
     return await _dbSet
         .Include(u => u.Wallets)
         .FirstOrDefaultAsync(u => u.Id == id);
+  }
+
+  public async Task<User?> FirstOrDefaultAsync(Expression<Func<User, bool>> predicate)
+  {
+    return await _dbSet.FirstOrDefaultAsync(predicate);
   }
 }

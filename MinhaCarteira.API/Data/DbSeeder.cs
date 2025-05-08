@@ -16,27 +16,21 @@ public static class DbSeeder
     // Criar usuários
     var users = new List<User>
         {
-            new User
-            {
-                Name = "João Silva",
-                Email = "joao@email.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
-                CreatedAt = DateTime.UtcNow
-            },
-            new User
-            {
-                Name = "Maria Santos",
-                Email = "maria@email.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
-                CreatedAt = DateTime.UtcNow
-            },
-            new User
-            {
-                Name = "Pedro Oliveira",
-                Email = "pedro@email.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
-                CreatedAt = DateTime.UtcNow
-            }
+            new User(
+                "João Silva",
+                "joao@email.com",
+                BCrypt.Net.BCrypt.HashPassword("123456")
+            ),
+            new User(
+                "Maria Santos",
+                "maria@email.com",
+                BCrypt.Net.BCrypt.HashPassword("123456")
+            ),
+            new User(
+                "Pedro Oliveira",
+                "pedro@email.com",
+                BCrypt.Net.BCrypt.HashPassword("123456")
+            )
         };
 
     await context.Users.AddRangeAsync(users);

@@ -1,4 +1,3 @@
-using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -7,30 +6,37 @@ public class AuthorizeCheckOperationFilter : IOperationFilter
 {
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
-        // verifica se o controller ou o action possui [Authorize]
-        var hasAuthorize = context.MethodInfo.DeclaringType
-                .GetCustomAttributes(true)
-                .OfType<AuthorizeAttribute>()
-                .Any()
-            || context.MethodInfo
-                .GetCustomAttributes(true)
-                .OfType<AuthorizeAttribute>()
-                .Any();
+        // pega todos os atributos do endpoint (controller + action)
+        var metadata = context.ApiDescription
+                              .ActionDescriptor
+                              .EndpointMetadata;
 
-        // Se não tiver [Authorize], não faz nada
-        if (!hasAuthorize) return;
+        var hasAuthorize = metadata.OfType<AuthorizeAttribute>().Any();
+        var hasAllowAnonymous = metadata.OfType<AllowAnonymousAttribute>().Any();
 
-        // Caso tenha, adiciona a seção Security à operação
+        // só continua se tiver [Authorize] e NÃO tiver [AllowAnonymous]
+        if (!hasAuthorize || hasAllowAnonymous)
+            return;
+
+        // adiciona respostas padronizadas
+        operation.Responses.TryAdd("401", new OpenApiResponse { Description = "Unauthorized" });
+        operation.Responses.TryAdd("403", new OpenApiResponse { Description = "Forbidden" });
+
+        // configura o security requirement pro Bearer
+        var bearerScheme = new OpenApiSecurityScheme
+        {
+            Reference = new OpenApiReference
+            {
+                Type = ReferenceType.SecurityScheme,
+                Id = "Bearer"
+            }
+        };
+
         operation.Security = new List<OpenApiSecurityRequirement>
         {
             new OpenApiSecurityRequirement
             {
-                [ new OpenApiSecurityScheme {
-                    Reference = new OpenApiReference {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = "Bearer"
-                    }
-                } ] = Array.Empty<string>()
+                [ bearerScheme ] = Array.Empty<string>()
             }
         };
     }

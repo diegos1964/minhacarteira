@@ -5,7 +5,7 @@ namespace MinhaCarteira.API.Services;
 
 public interface ITransactionService
 {
-  Task<IEnumerable<TransactionDTO>> GetUserTransactionsAsync(int userId, TransactionFilterDTO? filter = null);
+  Task<PaginatedResultDTO<TransactionDTO>> GetUserTransactionsAsync(int userId, TransactionFilterDTO filter);
   Task<TransactionDTO?> GetTransactionAsync(int id, int userId);
   Task<TransactionDTO> CreateTransactionAsync(CreateTransactionDTO createTransactionDto, int userId);
   Task<TransactionDTO> CreateTransferAsync(TransferDTO transferDto, int userId);

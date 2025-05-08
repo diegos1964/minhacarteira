@@ -5,9 +5,8 @@ using MinhaCarteira.API.Services;
 
 namespace MinhaCarteira.API.Controllers;
 
-
-[ApiController]
 [Authorize]
+[ApiController]
 [Route("api/[controller]")]
 public class TransactionController : ControllerBase
 {
@@ -19,82 +18,100 @@ public class TransactionController : ControllerBase
   }
 
   [HttpGet]
-  public async Task<ActionResult<IEnumerable<TransactionDTO>>> GetTransactions([FromQuery] TransactionFilterDTO? filter)
+  public async Task<ActionResult<ApiResponse<PaginatedResultDTO<TransactionDTO>>>> GetTransactions([FromQuery] TransactionFilterDTO? filter)
   {
     var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
-    var transactions = await _transactionService.GetUserTransactionsAsync(userId, filter);
-    return Ok(transactions);
+    var transactions = await _transactionService.GetUserTransactionsAsync(userId, filter ?? new TransactionFilterDTO());
+    return Ok(ApiResponse<PaginatedResultDTO<TransactionDTO>>.CreateSuccess(transactions, "Transações recuperadas com sucesso"));
   }
 
   [HttpGet("{id}")]
-  public async Task<ActionResult<TransactionDTO>> GetTransaction(int id)
+  public async Task<ActionResult<ApiResponse<TransactionDTO>>> GetTransaction(int id)
   {
     var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
     var transaction = await _transactionService.GetTransactionAsync(id, userId);
     if (transaction == null)
     {
-      return NotFound();
+      return NotFound(ApiResponse<TransactionDTO>.CreateError("Transação não encontrada"));
     }
-    return Ok(transaction);
+    return Ok(ApiResponse<TransactionDTO>.CreateSuccess(transaction, "Transação recuperada com sucesso"));
   }
 
   [HttpPost]
-  public async Task<ActionResult<TransactionDTO>> CreateTransaction(CreateTransactionDTO createTransactionDto)
+  public async Task<ActionResult<ApiResponse<TransactionDTO>>> CreateTransaction(CreateTransactionDTO createTransactionDto)
   {
     try
     {
       var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
       var transaction = await _transactionService.CreateTransactionAsync(createTransactionDto, userId);
-      return CreatedAtAction(nameof(GetTransaction), new { id = transaction.Id }, transaction);
+      return CreatedAtAction(
+          nameof(GetTransaction),
+          new { id = transaction.Id },
+          ApiResponse<TransactionDTO>.CreateSuccess(transaction, "Transação criada com sucesso")
+      );
     }
     catch (InvalidOperationException ex)
     {
-      return BadRequest(new { message = ex.Message });
+      return BadRequest(ApiResponse<TransactionDTO>.CreateError(ex.Message));
     }
   }
 
   [HttpPut("{id}")]
-  public async Task<IActionResult> UpdateTransaction(int id, UpdateTransactionDTO updateTransactionDto)
+  public async Task<ActionResult<ApiResponse<object>>> UpdateTransaction(int id, UpdateTransactionDTO updateTransactionDto)
   {
     try
     {
       var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
       await _transactionService.UpdateTransactionAsync(id, updateTransactionDto, userId);
-      return NoContent();
+      return Ok(ApiResponse<object>.CreateSuccess(null, "Transação atualizada com sucesso"));
     }
     catch (InvalidOperationException ex)
     {
-      return BadRequest(new { message = ex.Message });
+      return BadRequest(ApiResponse<object>.CreateError(ex.Message));
     }
   }
 
   [HttpDelete("{id}")]
-  public async Task<IActionResult> DeleteTransaction(int id)
+  public async Task<ActionResult<ApiResponse<object>>> DeleteTransaction(int id)
   {
     try
     {
       var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
       await _transactionService.DeleteTransactionAsync(id, userId);
-      return NoContent();
+      return Ok(ApiResponse<object>.CreateSuccess(null, "Transação excluída com sucesso"));
     }
     catch (InvalidOperationException ex)
     {
-      return BadRequest(new { message = ex.Message });
+      return BadRequest(ApiResponse<object>.CreateError(ex.Message));
     }
   }
 
   [HttpGet("wallet/{walletId}/income")]
-  public async Task<ActionResult<decimal>> GetTotalIncome(int walletId)
+  public async Task<ActionResult<ApiResponse<decimal>>> GetTotalIncome(int walletId)
   {
-    var income = await _transactionService.GetTotalIncomeAsync(walletId);
-    return Ok(income);
+    try
+    {
+      var income = await _transactionService.GetTotalIncomeAsync(walletId);
+      return Ok(ApiResponse<decimal>.CreateSuccess(income, "Receita total recuperada com sucesso"));
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(ApiResponse<decimal>.CreateError(ex.Message));
+    }
   }
 
   [HttpGet("wallet/{walletId}/expense")]
-  public async Task<ActionResult<decimal>> GetTotalExpense(int walletId)
+  public async Task<ActionResult<ApiResponse<decimal>>> GetTotalExpense(int walletId)
   {
-    var expense = await _transactionService.GetTotalExpenseAsync(walletId);
-    return Ok(expense);
+    try
+    {
+      var expense = await _transactionService.GetTotalExpenseAsync(walletId);
+      return Ok(ApiResponse<decimal>.CreateSuccess(expense, "Despesa total recuperada com sucesso"));
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(ApiResponse<decimal>.CreateError(ex.Message));
+    }
   }
 
   [HttpPost("transfer")]

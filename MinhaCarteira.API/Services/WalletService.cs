@@ -13,10 +13,11 @@ public class WalletService : IWalletService
     _walletRepository = walletRepository;
   }
 
-  public async Task<IEnumerable<WalletDTO>> GetUserWalletsAsync(int userId)
+  public async Task<PaginatedResultDTO<WalletDTO>> GetUserWalletsAsync(int userId, WalletFilterDTO filter)
   {
-    var wallets = await _walletRepository.GetByUserIdAsync(userId);
-    return wallets.Select(w => new WalletDTO
+    var (wallets, totalCount) = await _walletRepository.GetUserWalletsAsync(userId, filter);
+
+    var items = wallets.Select(w => new WalletDTO
     {
       Id = w.Id,
       Name = w.Name,
@@ -24,6 +25,15 @@ public class WalletService : IWalletService
       CreatedAt = w.CreatedAt,
       UpdatedAt = w.UpdatedAt
     });
+
+    return new PaginatedResultDTO<WalletDTO>
+    {
+      Items = items,
+      TotalItems = totalCount,
+      PageNumber = filter.PageNumber,
+      PageSize = filter.PageSize,
+      TotalPages = (int)Math.Ceiling(totalCount / (double)filter.PageSize)
+    };
   }
 
   public async Task<WalletDTO?> GetWalletAsync(int id, int userId)

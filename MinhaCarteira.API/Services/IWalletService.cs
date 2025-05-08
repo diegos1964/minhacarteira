@@ -5,7 +5,7 @@ namespace MinhaCarteira.API.Services;
 
 public interface IWalletService
 {
-  Task<IEnumerable<WalletDTO>> GetUserWalletsAsync(int userId);
+  Task<PaginatedResultDTO<WalletDTO>> GetUserWalletsAsync(int userId, WalletFilterDTO filter);
   Task<WalletDTO?> GetWalletAsync(int id, int userId);
   Task<WalletDTO> CreateWalletAsync(CreateWalletDTO createWalletDto, int userId);
   Task UpdateWalletAsync(int id, UpdateWalletDTO updateWalletDto, int userId);
