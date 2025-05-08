@@ -11,4 +11,5 @@ public interface IWalletService
   Task UpdateWalletAsync(int id, UpdateWalletDTO updateWalletDto, int userId);
   Task DeleteWalletAsync(int id, int userId);
   Task<decimal> GetTotalBalanceAsync(int userId);
+  Task<WalletTransferInfoDTO> GetWalletTransferInfoAsync(int walletId);
 }

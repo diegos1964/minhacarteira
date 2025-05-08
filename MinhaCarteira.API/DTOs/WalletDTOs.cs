@@ -28,3 +28,13 @@ public class WalletDTO
   public DateTime CreatedAt { get; set; }
   public DateTime? UpdatedAt { get; set; }
 }
+
+public class WalletTransferInfoDTO
+{
+  public int WalletId { get; set; }
+  public string WalletName { get; set; } = string.Empty;
+  public string OwnerName { get; set; } = string.Empty;
+  public string OwnerEmail { get; set; } = string.Empty;
+  public string OwnerCPF { get; set; } = string.Empty;
+  public DateTime CreatedAt { get; set; }
+}

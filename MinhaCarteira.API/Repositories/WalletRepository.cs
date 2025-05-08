@@ -32,6 +32,27 @@ public class WalletRepository : BaseRepository<Wallet>, IWalletRepository
         .SumAsync(w => w.Balance);
   }
 
+  public async Task<decimal> GetTotalBalanceAsync(int userId)
+  {
+    return await _dbSet
+        .Where(w => w.UserId == userId)
+        .SumAsync(w => w.Balance);
+  }
+
+  public async Task<Wallet?> GetByIdWithUserAsync(int id)
+  {
+    return await _dbSet
+        .Include(w => w.User)
+        .FirstOrDefaultAsync(w => w.Id == id);
+  }
+
+  public async Task<Wallet?> GetByIdAndUserIdAsync(int id, int userId)
+  {
+    return await _dbSet
+        .Include(w => w.User)
+        .FirstOrDefaultAsync(w => w.Id == id && w.UserId == userId);
+  }
+
   public async Task<(IEnumerable<Wallet> Items, int TotalCount)> GetUserWalletsAsync(int userId, WalletFilterDTO filter)
   {
     filter ??= new WalletFilterDTO();

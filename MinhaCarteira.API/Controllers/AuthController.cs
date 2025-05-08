@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using MinhaCarteira.API.DTOs;
 using MinhaCarteira.API.DTOs.Auth;
 using MinhaCarteira.API.Services;
+using MinhaCarteira.API.Models;
+using BCrypt.Net;
 
 namespace MinhaCarteira.API.Controllers;
 
@@ -19,7 +21,7 @@ public class AuthController : ControllerBase
 
   [AllowAnonymous]
   [HttpPost("register")]
-  public async Task<ActionResult<ApiResponse<AuthResponseDTO>>> Register(RegisterDTO registerDto)
+  public async Task<ActionResult<ApiResponse<AuthResponseDTO>>> Register([FromBody] RegisterDTO registerDto)
   {
     try
     {

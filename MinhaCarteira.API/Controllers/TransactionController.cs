@@ -56,7 +56,7 @@ public class TransactionController : ControllerBase
     }
   }
 
-  [HttpPut("{id}")]
+  [HttpPatch("{id}")]
   public async Task<ActionResult<ApiResponse<object>>> UpdateTransaction(int id, [FromBody] UpdateTransactionDTO updateTransactionDto)
   {
     try
@@ -120,7 +120,7 @@ public class TransactionController : ControllerBase
     try
     {
       var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
-      var transaction = await _transactionService.CreateTransferAsync(transferDto, userId);
+      var transaction = await _transactionService.TransferAsync(userId, transferDto);
       return CreatedAtAction(nameof(GetTransaction), new { id = transaction.Id }, transaction);
     }
     catch (InvalidOperationException ex)

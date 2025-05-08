@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MinhaCarteira.API.Models;
 
@@ -13,9 +14,14 @@ public class User
     public string Name { get; private set; } = string.Empty;
 
     [Required]
-    [EmailAddress]
     [StringLength(100)]
+    [EmailAddress]
     public string Email { get; private set; } = string.Empty;
+
+    [Required]
+    [StringLength(11)]
+    [RegularExpression(@"^\d{11}$", ErrorMessage = "CPF deve conter 11 dígitos numéricos")]
+    public string CPF { get; private set; } = string.Empty;
 
     [Required]
     public string PasswordHash { get; private set; } = string.Empty;
@@ -27,7 +33,7 @@ public class User
 
     private User() { }
 
-    public User(string name, string email, string passwordHash)
+    public User(string name, string email, string passwordHash, string cpf)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name cannot be empty", nameof(name));
@@ -35,10 +41,13 @@ public class User
             throw new ArgumentException("Email cannot be empty", nameof(email));
         if (string.IsNullOrWhiteSpace(passwordHash))
             throw new ArgumentException("Password hash cannot be empty", nameof(passwordHash));
+        if (!string.IsNullOrWhiteSpace(cpf) && !System.Text.RegularExpressions.Regex.IsMatch(cpf, @"^\d{11}$"))
+            throw new ArgumentException("CPF must contain exactly 11 digits", nameof(cpf));
 
         Name = name;
         Email = email;
         PasswordHash = passwordHash;
+        CPF = cpf;
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -66,6 +75,17 @@ public class User
             throw new ArgumentException("Password hash cannot be empty", nameof(passwordHash));
 
         PasswordHash = passwordHash;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateCPF(string cpf)
+    {
+        if (string.IsNullOrWhiteSpace(cpf))
+            throw new ArgumentException("CPF cannot be empty", nameof(cpf));
+        if (!System.Text.RegularExpressions.Regex.IsMatch(cpf, @"^\d{11}$"))
+            throw new ArgumentException("CPF must contain exactly 11 digits", nameof(cpf));
+
+        CPF = cpf;
         UpdatedAt = DateTime.UtcNow;
     }
 

@@ -33,7 +33,9 @@ public class TransactionService : ITransactionService
       Date = t.Date,
       Type = t.Type.ToString(),
       WalletId = t.WalletId,
-      WalletName = t.Wallet.Name
+      WalletName = t.Wallet.Name,
+      CreatedAt = t.CreatedAt,
+      UpdatedAt = t.UpdatedAt
     });
 
     return new PaginatedResultDTO<TransactionDTO>
@@ -260,19 +262,15 @@ public class TransactionService : ITransactionService
     };
   }
 
-  public async Task<TransactionDTO> CreateTransferAsync(TransferDTO transferDto, int userId)
+  public async Task<TransactionDTO> TransferAsync(int userId, TransferDTO transferDto)
   {
     // Verificar se a carteira de origem pertence ao usuário
-    var sourceWallet = await _context.Wallets
-        .FirstOrDefaultAsync(w => w.Id == transferDto.SourceWalletId && w.UserId == userId);
-
+    var sourceWallet = await _walletRepository.GetByIdAndUserIdAsync(transferDto.SourceWalletId, userId);
     if (sourceWallet == null)
       throw new InvalidOperationException("Carteira de origem não encontrada ou não pertence ao usuário");
 
     // Verificar se a carteira de destino existe
-    var destinationWallet = await _context.Wallets
-        .FirstOrDefaultAsync(w => w.Id == transferDto.DestinationWalletId);
-
+    var destinationWallet = await _walletRepository.GetByIdWithUserAsync(transferDto.DestinationWalletId);
     if (destinationWallet == null)
       throw new InvalidOperationException("Carteira de destino não encontrada");
 
@@ -305,9 +303,9 @@ public class TransactionService : ITransactionService
       CreatedAt = DateTime.UtcNow
     };
 
-    _context.Transactions.Add(sourceTransaction);
-    _context.Transactions.Add(destinationTransaction);
-    await _context.SaveChangesAsync();
+    await _transactionRepository.AddAsync(sourceTransaction);
+    await _transactionRepository.AddAsync(destinationTransaction);
+    await _transactionRepository.SaveChangesAsync();
 
     return new TransactionDTO
     {

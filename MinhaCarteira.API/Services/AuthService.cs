@@ -11,42 +11,44 @@ using MinhaCarteira.API.DTOs;
 using MinhaCarteira.API.DTOs.Auth;
 using MinhaCarteira.API.Models;
 using MinhaCarteira.API.Repositories;
+using BCrypt.Net;
 
 namespace MinhaCarteira.API.Services
 {
   public class AuthService : IAuthService
   {
     private readonly IUserRepository _userRepository;
-    private readonly IPasswordHasher _passwordHasher;
-    private readonly IConfiguration _configuration;
+    private readonly IJwtService _jwtService;
 
-    public AuthService(
-        IUserRepository userRepository,
-        IPasswordHasher passwordHasher,
-        IConfiguration configuration)
+    public AuthService(IUserRepository userRepository, IJwtService jwtService)
     {
       _userRepository = userRepository;
-      _passwordHasher = passwordHasher;
-      _configuration = configuration;
+      _jwtService = jwtService;
     }
 
     public async Task<AuthResponseDTO> RegisterAsync(RegisterDTO registerDto)
     {
-      if (await _userRepository.AnyAsync(u => u.Email == registerDto.Email))
+      if (await _userRepository.GetByEmailAsync(registerDto.Email) != null)
       {
-        throw new InvalidOperationException("Email already exists");
+        throw new InvalidOperationException("Email já está em uso");
+      }
+
+      if (await _userRepository.GetByCPFAsync(registerDto.CPF) != null)
+      {
+        throw new InvalidOperationException("CPF já está em uso");
       }
 
       var user = new User(
         registerDto.Name,
         registerDto.Email,
-        _passwordHasher.HashPassword(registerDto.Password)
+        BCrypt.Net.BCrypt.HashPassword(registerDto.Password),
+        registerDto.CPF
       );
 
       await _userRepository.AddAsync(user);
       await _userRepository.SaveChangesAsync();
 
-      var token = GenerateJwtToken(user);
+      var token = _jwtService.GenerateToken(user);
 
       return new AuthResponseDTO
       {
@@ -56,22 +58,25 @@ namespace MinhaCarteira.API.Services
           Id = user.Id,
           Name = user.Name,
           Email = user.Email,
-          CreatedAt = user.CreatedAt,
-          UpdatedAt = user.UpdatedAt ?? DateTime.UtcNow
+          CPF = user.CPF
         }
       };
     }
 
     public async Task<AuthResponseDTO> LoginAsync(LoginDTO loginDto)
     {
-      var user = await _userRepository.FirstOrDefaultAsync(u => u.Email == loginDto.Email);
-
-      if (user == null || !_passwordHasher.VerifyPassword(loginDto.Password, user.PasswordHash))
+      var user = await _userRepository.GetByEmailAsync(loginDto.Email);
+      if (user == null)
       {
-        throw new InvalidOperationException("Invalid email or password");
+        throw new InvalidOperationException("Email ou senha inválidos");
       }
 
-      var token = GenerateJwtToken(user);
+      if (!BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
+      {
+        throw new InvalidOperationException("Email ou senha inválidos");
+      }
+
+      var token = _jwtService.GenerateToken(user);
 
       return new AuthResponseDTO
       {
@@ -81,8 +86,7 @@ namespace MinhaCarteira.API.Services
           Id = user.Id,
           Name = user.Name,
           Email = user.Email,
-          CreatedAt = user.CreatedAt,
-          UpdatedAt = user.UpdatedAt ?? DateTime.UtcNow
+          CPF = user.CPF
         }
       };
     }
@@ -103,29 +107,6 @@ namespace MinhaCarteira.API.Services
         CreatedAt = user.CreatedAt,
         UpdatedAt = user.UpdatedAt ?? DateTime.UtcNow
       };
-    }
-
-    private string GenerateJwtToken(User user)
-    {
-      var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not found")));
-      var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-      var claims = new[]
-      {
-        new Claim("id", user.Id.ToString()),
-        new Claim("email", user.Email),
-        new Claim("name", user.Name)
-      };
-
-      var token = new JwtSecurityToken(
-          issuer: _configuration["Jwt:Issuer"],
-          audience: _configuration["Jwt:Audience"],
-          claims: claims,
-          expires: DateTime.UtcNow.AddDays(7),
-          signingCredentials: credentials
-      );
-
-      return new JwtSecurityTokenHandler().WriteToken(token);
     }
   }
 }

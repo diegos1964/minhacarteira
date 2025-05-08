@@ -105,6 +105,25 @@ public class WalletService : IWalletService
 
   public async Task<decimal> GetTotalBalanceAsync(int userId)
   {
-    return await _walletRepository.GetTotalBalanceByUserIdAsync(userId);
+    return await _walletRepository.GetTotalBalanceAsync(userId);
+  }
+
+  public async Task<WalletTransferInfoDTO> GetWalletTransferInfoAsync(int walletId)
+  {
+    var wallet = await _walletRepository.GetByIdAsync(walletId);
+    if (wallet == null)
+    {
+      throw new InvalidOperationException("Carteira não encontrada");
+    }
+
+    return new WalletTransferInfoDTO
+    {
+      WalletId = wallet.Id,
+      WalletName = wallet.Name,
+      OwnerName = wallet.User.Name,
+      OwnerEmail = wallet.User.Email,
+      OwnerCPF = wallet.User.CPF,
+      CreatedAt = wallet.CreatedAt
+    };
   }
 }

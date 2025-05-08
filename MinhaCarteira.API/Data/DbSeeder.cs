@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MinhaCarteira.API.Models;
 using BCrypt.Net;
+using MinhaCarteira.API.Data.Seed;
 
 namespace MinhaCarteira.API.Data;
 
@@ -10,28 +11,11 @@ public static class DbSeeder
   {
     if (await context.Users.AnyAsync())
     {
-      return; // Database has been seeded
+      return; 
     }
 
     // Criar usuários
-    var users = new List<User>
-        {
-            new User(
-                "João Silva",
-                "joao@email.com",
-                BCrypt.Net.BCrypt.HashPassword("123456")
-            ),
-            new User(
-                "Maria Santos",
-                "maria@email.com",
-                BCrypt.Net.BCrypt.HashPassword("123456")
-            ),
-            new User(
-                "Pedro Oliveira",
-                "pedro@email.com",
-                BCrypt.Net.BCrypt.HashPassword("123456")
-            )
-        };
+    var users = UserSeedData.Users.ToList();
 
     await context.Users.AddRangeAsync(users);
     await context.SaveChangesAsync();

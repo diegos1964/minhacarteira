@@ -18,11 +18,13 @@ API para gerenciamento de carteiras e transações financeiras.
 - PostgreSQL
 - JWT Authentication
 - Swagger/OpenAPI
+- Docker
+- Scalar (Documentação da API)
 
 ## Pré-requisitos
 
 - .NET 9.0 SDK
-- Docker (para o PostgreSQL)
+- Docker e Docker Compose
 - Git
 
 ## Configuração do Ambiente
@@ -33,24 +35,22 @@ git clone https://github.com/seu-usuario/minhacarteira.git
 cd minhacarteira
 ```
 
-2. Inicie o container do PostgreSQL:
+2. Gere o certificado de desenvolvimento HTTPS:
 ```bash
-docker run --name postgres-minhacarteira -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres
+dotnet dev-certs https --export-path ./aspnetapp.pfx --password "senha123!"
 ```
 
-3. Restaure as dependências e execute as migrações:
+3. Inicie os containers com Docker Compose:
 ```bash
-dotnet restore
-dotnet ef database update --project MinhaCarteira.API
+docker-compose up --build
 ```
 
-4. Execute a API:
-```bash
-cd MinhaCarteira.API
-dotnet run
-```
-
-A API estará disponível em `https://localhost:7001` e o Swagger em `https://localhost:7001/swagger`.
+A API estará disponível em:
+- HTTP: http://localhost:5037
+- HTTPS: https://localhost:7266
+- Swagger UI: https://localhost:7266/swagger
+- ReDoc: https://localhost:7266/redoc
+- Scalar: https://localhost:7266/scalar
 
 ## Usuários de Teste
 
@@ -72,27 +72,70 @@ Cada usuário possui duas carteiras:
 - Carteira Principal
 - Carteira Poupança
 
-## Endpoints Principais
+## Endpoints da API
 
 ### Autenticação
-- POST /api/auth/register - Registro de novo usuário
-- POST /api/auth/login - Login de usuário
+- `POST /api/auth/register` - Registro de novo usuário
+  - Body: `{ "name": "string", "email": "string", "password": "string", "cpf": "string" }`
+- `POST /api/auth/login` - Login de usuário
+  - Body: `{ "email": "string", "password": "string" }`
+- `GET /api/auth/me` - Obtém informações do usuário logado
+  - Requer autenticação
 
 ### Carteiras
-- GET /api/wallet - Lista todas as carteiras do usuário
-- POST /api/wallet - Cria uma nova carteira
-- GET /api/wallet/{id} - Obtém detalhes de uma carteira
-- PUT /api/wallet/{id} - Atualiza uma carteira
-- DELETE /api/wallet/{id} - Remove uma carteira
-- GET /api/wallet/balance - Obtém o saldo total do usuário
+- `GET /api/wallet` - Lista todas as carteiras do usuário
+  - Query params: `page`, `pageSize`, `search`
+  - Requer autenticação
+- `GET /api/wallet/{id}` - Obtém detalhes de uma carteira
+  - Requer autenticação
+- `POST /api/wallet` - Cria uma nova carteira
+  - Body: `{ "name": "string", "description": "string" }`
+  - Requer autenticação
+- `PUT /api/wallet/{id}` - Atualiza uma carteira
+  - Body: `{ "name": "string", "description": "string" }`
+  - Requer autenticação
+- `DELETE /api/wallet/{id}` - Remove uma carteira
+  - Requer autenticação
+- `GET /api/wallet/balance` - Obtém o saldo total do usuário
+  - Requer autenticação
+- `GET /api/wallet/transfer-info/{walletId}` - Obtém informações para transferência
+  - Retorna: `{ "id": number, "name": "string", "ownerName": "string", "ownerCpf": "string" }`
+  - Requer autenticação
 
 ### Transações
-- GET /api/transaction - Lista todas as transações (com filtros opcionais)
-- POST /api/transaction - Cria uma nova transação
-- POST /api/transaction/transfer - Realiza uma transferência entre carteiras
-- GET /api/transaction/{id} - Obtém detalhes de uma transação
-- PUT /api/transaction/{id} - Atualiza uma transação
-- DELETE /api/transaction/{id} - Remove uma transação
+- `GET /api/transaction` - Lista todas as transações
+  - Query params: `page`, `pageSize`, `startDate`, `endDate`, `type`, `walletId`
+  - Requer autenticação
+- `GET /api/transaction/{id}` - Obtém detalhes de uma transação
+  - Requer autenticação
+- `POST /api/transaction` - Cria uma nova transação
+  - Body: `{ "type": "Income|Expense", "amount": number, "description": "string", "walletId": number, "date": "date" }`
+  - Requer autenticação
+- `PATCH /api/transaction/{id}` - Atualiza uma transação
+  - Body: `{ "type": "Income|Expense", "amount": number, "description": "string", "date": "date" }`
+  - Requer autenticação
+- `DELETE /api/transaction/{id}` - Remove uma transação
+  - Requer autenticação
+- `POST /api/transaction/transfer` - Realiza uma transferência entre carteiras
+  - Body: `{ "sourceWalletId": number, "targetWalletId": number, "amount": number, "description": "string" }`
+  - Requer autenticação
+- `GET /api/transaction/wallet/{walletId}/income` - Obtém receita total da carteira
+  - Requer autenticação
+- `GET /api/transaction/wallet/{walletId}/expense` - Obtém despesa total da carteira
+  - Requer autenticação
+
+## Documentação da API
+
+A API possui três interfaces de documentação:
+
+1. **Swagger UI**: Interface interativa para testar os endpoints
+   - URL: https://localhost:7266/swagger
+
+2. **ReDoc**: Documentação em formato de página única
+   - URL: https://localhost:7266/redoc
+
+3. **Scalar**: Interface moderna e interativa
+   - URL: https://localhost:7266/scalar
 
 ## Contribuição
 

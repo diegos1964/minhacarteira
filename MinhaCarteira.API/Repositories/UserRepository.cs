@@ -16,6 +16,11 @@ public class UserRepository : BaseRepository<User>, IUserRepository
     return await _dbSet.FirstOrDefaultAsync(u => u.Email == email);
   }
 
+  public async Task<User?> GetByCPFAsync(string cpf)
+  {
+    return await _dbSet.FirstOrDefaultAsync(u => u.CPF == cpf);
+  }
+
   public async Task<User?> GetByIdWithWalletsAsync(int id)
   {
     return await _dbSet

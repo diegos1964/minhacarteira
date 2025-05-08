@@ -93,4 +93,18 @@ public class WalletController : ControllerBase
     var balance = await _walletService.GetTotalBalanceAsync(userId);
     return Ok(ApiResponse<decimal>.CreateSuccess(balance, "Saldo total recuperado com sucesso"));
   }
+
+  [HttpGet("transfer-info/{walletId}")]
+  public async Task<ActionResult<ApiResponse<WalletTransferInfoDTO>>> GetWalletTransferInfo(int walletId)
+  {
+    try
+    {
+      var walletInfo = await _walletService.GetWalletTransferInfoAsync(walletId);
+      return Ok(ApiResponse<WalletTransferInfoDTO>.CreateSuccess(walletInfo, "Informações da carteira recuperadas com sucesso"));
+    }
+    catch (InvalidOperationException ex)
+    {
+      return BadRequest(ApiResponse<WalletTransferInfoDTO>.CreateError(ex.Message));
+    }
+  }
 }

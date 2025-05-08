@@ -1,6 +1,3 @@
 @MinhaCarteira.API_HostAddress = http://localhost:5037
 
-GET {{MinhaCarteira.API_HostAddress}}/weatherforecast/
-Accept: application/json
 
-###
