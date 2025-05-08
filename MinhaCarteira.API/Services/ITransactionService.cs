@@ -11,6 +11,6 @@ public interface ITransactionService
   Task<TransactionDTO> CreateTransferAsync(TransferDTO transferDto, int userId);
   Task UpdateTransactionAsync(int id, UpdateTransactionDTO updateTransactionDto, int userId);
   Task DeleteTransactionAsync(int id, int userId);
-  Task<decimal> GetTotalIncomeAsync(int walletId);
-  Task<decimal> GetTotalExpenseAsync(int walletId);
+  Task<WalletIncomeDTO> GetTotalIncomeAsync(int walletId);
+  Task<WalletExpenseDTO> GetTotalExpenseAsync(int walletId);
 }

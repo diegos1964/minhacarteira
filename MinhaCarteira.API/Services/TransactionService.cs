@@ -71,7 +71,8 @@ public class TransactionService : ITransactionService
       DestinationWalletId = transaction.DestinationWalletId,
       DestinationWalletName = transaction.DestinationWallet?.Name,
       CreatedAt = transaction.CreatedAt,
-      UpdatedAt = transaction.UpdatedAt
+      UpdatedAt = transaction.UpdatedAt,
+      Date = transaction.Date
     };
   }
 
@@ -83,7 +84,12 @@ public class TransactionService : ITransactionService
       throw new InvalidOperationException("Carteira não encontrada");
     }
 
-    if (createTransactionDto.Type == TransactionType.Transfer && createTransactionDto.DestinationWalletId.HasValue)
+    if (!Enum.TryParse<TransactionType>(createTransactionDto.Type, true, out var transactionType))
+    {
+      throw new InvalidOperationException("Tipo de transação inválido");
+    }
+
+    if (transactionType == TransactionType.Transfer && createTransactionDto.DestinationWalletId.HasValue)
     {
       var destinationWallet = await _walletRepository.GetByIdAsync(createTransactionDto.DestinationWalletId.Value);
       if (destinationWallet == null)
@@ -101,14 +107,15 @@ public class TransactionService : ITransactionService
     {
       Description = createTransactionDto.Description,
       Amount = createTransactionDto.Amount,
-      Type = createTransactionDto.Type,
+      Type = transactionType,
       WalletId = createTransactionDto.WalletId,
-      DestinationWalletId = createTransactionDto.DestinationWalletId
+      DestinationWalletId = createTransactionDto.DestinationWalletId,
+      Date = createTransactionDto.Date.ToUniversalTime()
     };
 
     await _transactionRepository.AddAsync(transaction);
 
-    switch (createTransactionDto.Type)
+    switch (transactionType)
     {
       case TransactionType.Income:
         wallet.Balance += createTransactionDto.Amount;
@@ -149,6 +156,7 @@ public class TransactionService : ITransactionService
       Type = transaction.Type.ToString(),
       WalletId = transaction.WalletId,
       WalletName = wallet.Name,
+      Date = transaction.Date,
       DestinationWalletId = transaction.DestinationWalletId,
       DestinationWalletName = transaction.DestinationWallet?.Name,
       CreatedAt = transaction.CreatedAt,
@@ -218,14 +226,38 @@ public class TransactionService : ITransactionService
     await _transactionRepository.SaveChangesAsync();
   }
 
-  public async Task<decimal> GetTotalIncomeAsync(int walletId)
+  public async Task<WalletIncomeDTO> GetTotalIncomeAsync(int walletId)
   {
-    return await _transactionRepository.GetTotalIncomeByWalletIdAsync(walletId);
+    var wallet = await _walletRepository.GetByIdAsync(walletId);
+    if (wallet == null)
+    {
+      throw new InvalidOperationException("Carteira não encontrada");
+    }
+
+    var totalIncome = await _transactionRepository.GetTotalIncomeByWalletIdAsync(walletId);
+    return new WalletIncomeDTO
+    {
+      WalletId = wallet.Id,
+      WalletName = wallet.Name,
+      TotalIncome = totalIncome
+    };
   }
 
-  public async Task<decimal> GetTotalExpenseAsync(int walletId)
+  public async Task<WalletExpenseDTO> GetTotalExpenseAsync(int walletId)
   {
-    return await _transactionRepository.GetTotalExpenseByWalletIdAsync(walletId);
+    var wallet = await _walletRepository.GetByIdAsync(walletId);
+    if (wallet == null)
+    {
+      throw new InvalidOperationException("Carteira não encontrada");
+    }
+
+    var totalExpense = await _transactionRepository.GetTotalExpenseByWalletIdAsync(walletId);
+    return new WalletExpenseDTO
+    {
+      WalletId = wallet.Id,
+      WalletName = wallet.Name,
+      TotalExpense = totalExpense
+    };
   }
 
   public async Task<TransactionDTO> CreateTransferAsync(TransferDTO transferDto, int userId)
@@ -245,7 +277,9 @@ public class TransactionService : ITransactionService
       throw new InvalidOperationException("Carteira de destino não encontrada");
 
     // Verificar se há saldo suficiente
-    var currentBalance = await GetTotalIncomeAsync(sourceWallet.Id) - await GetTotalExpenseAsync(sourceWallet.Id);
+    var income = await GetTotalIncomeAsync(sourceWallet.Id);
+    var expense = await GetTotalExpenseAsync(sourceWallet.Id);
+    var currentBalance = income.TotalIncome - expense.TotalExpense;
     if (currentBalance < transferDto.Amount)
       throw new InvalidOperationException("Saldo insuficiente para realizar a transferência");
 

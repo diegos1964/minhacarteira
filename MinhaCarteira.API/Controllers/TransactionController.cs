@@ -38,7 +38,7 @@ public class TransactionController : ControllerBase
   }
 
   [HttpPost]
-  public async Task<ActionResult<ApiResponse<TransactionDTO>>> CreateTransaction(CreateTransactionDTO createTransactionDto)
+  public async Task<ActionResult<ApiResponse<TransactionDTO>>> CreateTransaction([FromBody] CreateTransactionDTO createTransactionDto)
   {
     try
     {
@@ -57,7 +57,7 @@ public class TransactionController : ControllerBase
   }
 
   [HttpPut("{id}")]
-  public async Task<ActionResult<ApiResponse<object>>> UpdateTransaction(int id, UpdateTransactionDTO updateTransactionDto)
+  public async Task<ActionResult<ApiResponse<object>>> UpdateTransaction(int id, [FromBody] UpdateTransactionDTO updateTransactionDto)
   {
     try
     {
@@ -87,30 +87,30 @@ public class TransactionController : ControllerBase
   }
 
   [HttpGet("wallet/{walletId}/income")]
-  public async Task<ActionResult<ApiResponse<decimal>>> GetTotalIncome(int walletId)
+  public async Task<ActionResult<ApiResponse<WalletIncomeDTO>>> GetTotalIncome(int walletId)
   {
     try
     {
       var income = await _transactionService.GetTotalIncomeAsync(walletId);
-      return Ok(ApiResponse<decimal>.CreateSuccess(income, "Receita total recuperada com sucesso"));
+      return Ok(ApiResponse<WalletIncomeDTO>.CreateSuccess(income, "Receita total recuperada com sucesso"));
     }
     catch (InvalidOperationException ex)
     {
-      return BadRequest(ApiResponse<decimal>.CreateError(ex.Message));
+      return BadRequest(ApiResponse<WalletIncomeDTO>.CreateError(ex.Message));
     }
   }
 
   [HttpGet("wallet/{walletId}/expense")]
-  public async Task<ActionResult<ApiResponse<decimal>>> GetTotalExpense(int walletId)
+  public async Task<ActionResult<ApiResponse<WalletExpenseDTO>>> GetTotalExpense(int walletId)
   {
     try
     {
       var expense = await _transactionService.GetTotalExpenseAsync(walletId);
-      return Ok(ApiResponse<decimal>.CreateSuccess(expense, "Despesa total recuperada com sucesso"));
+      return Ok(ApiResponse<WalletExpenseDTO>.CreateSuccess(expense, "Despesa total recuperada com sucesso"));
     }
     catch (InvalidOperationException ex)
     {
-      return BadRequest(ApiResponse<decimal>.CreateError(ex.Message));
+      return BadRequest(ApiResponse<WalletExpenseDTO>.CreateError(ex.Message));
     }
   }
 

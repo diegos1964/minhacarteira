@@ -1,23 +1,28 @@
 using System.ComponentModel.DataAnnotations;
 using MinhaCarteira.API.Models;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MinhaCarteira.API.DTOs;
 
 public class CreateTransactionDTO
 {
-  [Required]
-  [StringLength(200)]
+  [Required(ErrorMessage = "A descrição é obrigatória")]
+  [StringLength(200, ErrorMessage = "A descrição deve ter no máximo 200 caracteres")]
   public string Description { get; set; } = string.Empty;
 
-  [Required]
-  [Range(0.01, double.MaxValue)]
+  [Required(ErrorMessage = "O valor é obrigatório")]
+  [Range(0.01, double.MaxValue, ErrorMessage = "O valor deve ser maior que zero")]
   public decimal Amount { get; set; }
 
-  [Required]
-  public TransactionType Type { get; set; }
+  [Required(ErrorMessage = "O tipo é obrigatório")]
+  [SwaggerSchema(Description = "Tipo da transação: Income (Receita), Expense (Despesa), Transfer (Transferência)")]
+  public string Type { get; set; } = string.Empty;
 
-  [Required]
+  [Required(ErrorMessage = "A carteira é obrigatória")]
   public int WalletId { get; set; }
+
+  [Required(ErrorMessage = "A data da transação é obrigatória")]
+  public DateTime Date { get; set; }
 
   public int? DestinationWalletId { get; set; }
 }
@@ -42,4 +47,18 @@ public class TransactionDTO
   public string? DestinationWalletName { get; set; }
   public DateTime CreatedAt { get; set; }
   public DateTime? UpdatedAt { get; set; }
+}
+
+public class WalletIncomeDTO
+{
+  public int WalletId { get; set; }
+  public string WalletName { get; set; } = string.Empty;
+  public decimal TotalIncome { get; set; }
+}
+
+public class WalletExpenseDTO
+{
+  public int WalletId { get; set; }
+  public string WalletName { get; set; } = string.Empty;
+  public decimal TotalExpense { get; set; }
 }

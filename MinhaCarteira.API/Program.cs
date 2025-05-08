@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using MinhaCarteira.API.Data;
 using MinhaCarteira.API.Services;
 using MinhaCarteira.API.Repositories;
+using MinhaCarteira.API.Filters;
 using System.Text;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -66,6 +67,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 
     c.OperationFilter<AuthorizeCheckOperationFilter>();
+    c.SchemaFilter<SwaggerEnumFilter>();
 });
 
 var app = builder.Build();
