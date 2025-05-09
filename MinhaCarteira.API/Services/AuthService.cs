@@ -103,6 +103,7 @@ namespace MinhaCarteira.API.Services
         Id = user.Id,
         Name = user.Name,
         Email = user.Email,
+        CPF = user.CPF,
         CreatedAt = user.CreatedAt,
         UpdatedAt = user.UpdatedAt ?? DateTime.UtcNow
       };
