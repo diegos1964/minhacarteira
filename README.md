@@ -21,6 +21,7 @@ API para gerenciamento de carteiras e transações financeiras.
 - ReDoc
 - Docker
 - CORS (Cross-Origin Resource Sharing)
+- Scalar (Documentação da API)
 
 ## Pré-requisitos
 
@@ -51,6 +52,7 @@ A API estará disponível em:
 - HTTPS: https://localhost:7266
 - Swagger UI: https://localhost:7266/swagger
 - ReDoc: https://localhost:7266/redoc
+- Scalar: https://localhost:7266/scalar
 
 ## Configuração do CORS
 
@@ -162,13 +164,16 @@ Cada usuário possui duas carteiras:
 
 ## Documentação da API
 
-A API possui duas interfaces de documentação:
+A API possui três interfaces de documentação:
 
 1. **Swagger UI**: Interface interativa para testar os endpoints
    - URL: https://localhost:7266/swagger
 
 2. **ReDoc**: Documentação em formato de página única
    - URL: https://localhost:7266/redoc
+
+3. **Scalar**: Interface moderna e interativa
+   - URL: https://localhost:7266/scalar
 
 ## Contribuição
 
