@@ -70,15 +70,15 @@ O sistema vem com três usuários pré-cadastrados:
 
 1. João Silva
    - Email: joao@email.com
-   - Senha: 123456
+   - Senha: 123456@aA
 
 2. Maria Santos
    - Email: maria@email.com
-   - Senha: 123456
+   - Senha: 123456@aA
 
 3. Pedro Oliveira
    - Email: pedro@email.com
-   - Senha: 123456
+   - Senha: 123456@aA
 
 Cada usuário possui duas carteiras:
 - Carteira Principal
@@ -204,8 +204,22 @@ Os testes cobrem os seguintes cenários:
 
 #### AuthController
 - Registro de usuário
+  - Validação de dados obrigatórios
+  - Validação de formato de email
+  - Validação de CPF
+  - Validação de força da senha
+  - Validação de confirmação de senha
+  - Validação de comprimento do nome
+  - Tratamento de email duplicado
+  - Tratamento de erros internos
 - Login
+  - Validação de credenciais
+  - Tratamento de credenciais inválidas
+  - Tratamento de erros internos
 - Obtenção de informações do usuário logado
+  - Validação de token
+  - Tratamento de usuário não encontrado
+  - Tratamento de erros internos
 
 #### WalletController
 - Listagem de carteiras
@@ -246,23 +260,51 @@ Os testes seguem o padrão AAA (Arrange-Act-Assert):
 - **Act**: Execução da ação sendo testada
 - **Assert**: Verificação dos resultados
 
-Exemplo:
+Exemplo de teste de validação:
 ```csharp
-[Fact]
-public async Task CreateTransaction_ValidData_ReturnsCreatedResult()
+[Theory]
+[InlineData("", "O nome é obrigatório")]
+[InlineData("Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat", "O nome deve ter no máximo 100 caracteres")]
+public async Task Register_InvalidName_ReturnsBadRequest(string name, string expectedError)
 {
     // Arrange
-    var createDto = new CreateTransactionDTO { ... };
-    _mockTransactionService.Setup(...);
+    var registerDto = new RegisterDTO { Name = name, ... };
+    ValidateModel(registerDto);
 
     // Act
-    var result = await _controller.CreateTransaction(createDto);
+    var result = await _controller.Register(registerDto);
 
     // Assert
-    var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-    Assert.True(response.Success);
+    var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+    var response = Assert.IsType<ApiResponse<object>>(badRequestResult.Value);
+    Assert.False(response.Success);
+    Assert.Contains(expectedError, response.Message);
 }
 ```
+
+### Validações Testadas
+
+O sistema implementa e testa as seguintes validações:
+
+#### Registro de Usuário
+- Nome:
+  - Obrigatório
+  - Máximo de 100 caracteres
+- Email:
+  - Obrigatório
+  - Formato válido
+  - Único no sistema
+- CPF:
+  - Obrigatório
+  - Formato válido
+  - Dígitos verificadores válidos
+- Senha:
+  - Mínimo de 8 caracteres
+  - Pelo menos uma letra maiúscula
+  - Pelo menos uma letra minúscula
+  - Pelo menos um número
+  - Pelo menos um caractere especial
+  - Confirmação deve ser igual
 
 ### Dados de Teste
 
