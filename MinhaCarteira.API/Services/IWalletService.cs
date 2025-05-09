@@ -10,6 +10,8 @@ public interface IWalletService
   Task<WalletDTO> CreateWalletAsync(CreateWalletDTO createWalletDto, int userId);
   Task UpdateWalletAsync(int id, UpdateWalletDTO updateWalletDto, int userId);
   Task DeleteWalletAsync(int id, int userId);
-  Task<decimal> GetTotalBalanceAsync(int userId);
+  Task<TotalBalanceDTO> GetTotalBalanceAsync(int userId);
   Task<WalletTransferInfoDTO> GetWalletTransferInfoAsync(int walletId);
+  Task<IEnumerable<WalletTransferInfoDTO>> GetWalletTransferInfoByEmailAsync(string email);
+  Task<IEnumerable<WalletTransferInfoDTO>> GetWalletTransferInfoByCPFAsync(string cpf);
 }

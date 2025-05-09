@@ -9,24 +9,44 @@ using MinhaCarteira.API.Filters;
 using System.Text;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Scalar.AspNetCore;
+using Microsoft.Extensions.Options;
+using System.Reflection;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.OpenApi;
+using System.IO;
+using MinhaCarteira.API.Tranformers;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
-builder.Services.AddCors(options =>
+builder.Services.AddOpenApi(options =>
 {
-    options.AddPolicy("AllowSwagger", policy =>
-    {
-        policy
-          .WithOrigins("http://localhost:5037")  // origem do seu Swagger UI
-          .AllowAnyHeader()
-          .AllowAnyMethod()
-          .AllowCredentials();
-    });
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+    options.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi3_0;
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:3000",     // React default
+                "http://localhost:5173",     // Vite default
+                "http://localhost:4200",     // Angular default
+                "http://localhost:8080",     // Vue default
+                "https://localhost:3000",
+                "https://localhost:5173",
+                "https://localhost:4200",
+                "https://localhost:8080"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -42,7 +62,6 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddScoped<IJwtService, JwtService>();
-
 
 // Configure JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -61,10 +80,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-
-
-// // Register services
-builder.Services.AddScoped<JwtService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -82,35 +97,33 @@ builder.Services.AddSwaggerGen(c =>
 
     c.OperationFilter<AuthorizeCheckOperationFilter>();
     c.SchemaFilter<SwaggerEnumFilter>();
+
 });
 
 var app = builder.Build();
 
-app.UseHttpsRedirection();
-//app.UseCors("AllowSwagger");
-// Configure the HTTP request pipeline.
+app.UseCors("AllowFrontend");
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI(o =>
     {
-        o.SwaggerEndpoint("/openapi/v1.json", "Minha Carteira Api");
-
+        o.SwaggerEndpoint("/swagger/v1/swagger.json", "Minha Carteira API v1");
     });
-
+    app.MapOpenApi();
+    app.MapScalarApiReference();
     app.UseReDoc(o =>
     {
         o.RoutePrefix = "redoc";
         o.SpecUrl = "/openapi/v1.json";
         o.DocumentTitle = "Minha Carteira Api";
     });
-
-    app.MapScalarApiReference();
 }
 
-
-
+if (!app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("UseHttps"))
+{
+    app.UseHttpsRedirection();
+}
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -125,4 +138,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+
 

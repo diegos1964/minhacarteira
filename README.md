@@ -77,7 +77,7 @@ Cada usuário possui duas carteiras:
 
 ### Autenticação
 - `POST /api/auth/register` - Registro de novo usuário
-  - Body: `{ "name": "string", "email": "string", "password": "string", "cpf": "string" }`
+  - Body: `{ "name": "string", "email": "string", "password": "string","confirmPassword": "string", "cpf": "string" }`
 - `POST /api/auth/login` - Login de usuário
   - Body: `{ "email": "string", "password": "string" }`
 - `GET /api/auth/me` - Obtém informações do usuário logado

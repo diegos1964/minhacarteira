@@ -1,16 +1,19 @@
 using MinhaCarteira.API.DTOs;
 using MinhaCarteira.API.Models;
 using MinhaCarteira.API.Repositories;
+using MinhaCarteira.API.Exceptions;
 
 namespace MinhaCarteira.API.Services;
 
 public class WalletService : IWalletService
 {
   private readonly IWalletRepository _walletRepository;
+  private readonly ITransactionRepository _transactionRepository;
 
-  public WalletService(IWalletRepository walletRepository)
+  public WalletService(IWalletRepository walletRepository, ITransactionRepository transactionRepository)
   {
     _walletRepository = walletRepository;
+    _transactionRepository = transactionRepository;
   }
 
   public async Task<PaginatedResultDTO<WalletDTO>> GetUserWalletsAsync(int userId, WalletFilterDTO filter)
@@ -59,12 +62,31 @@ public class WalletService : IWalletService
     var wallet = new Wallet
     {
       Name = createWalletDto.Name,
-      Balance = createWalletDto.InitialBalance,
-      UserId = userId
+      UserId = userId,
+      Balance = 0
     };
 
     await _walletRepository.AddAsync(wallet);
     await _walletRepository.SaveChangesAsync();
+
+    if (createWalletDto.InitialBalance.HasValue && createWalletDto.InitialBalance.Value > 0)
+    {
+      var transaction = new Transaction
+      {
+        WalletId = wallet.Id,
+        Amount = createWalletDto.InitialBalance.Value,
+        Type = TransactionType.Income,
+        Description = "Saldo inicial da carteira",
+        Date = DateTime.UtcNow
+      };
+
+      await _transactionRepository.AddAsync(transaction);
+      await _transactionRepository.SaveChangesAsync();
+
+      wallet.Balance = createWalletDto.InitialBalance.Value;
+      _walletRepository.Update(wallet);
+      await _walletRepository.SaveChangesAsync();
+    }
 
     return new WalletDTO
     {
@@ -81,7 +103,7 @@ public class WalletService : IWalletService
     var wallet = await _walletRepository.GetByIdAsync(id);
     if (wallet == null || wallet.UserId != userId)
     {
-      throw new InvalidOperationException("Carteira não encontrada");
+      throw new AppException("Carteira não encontrada");
     }
 
     wallet.Name = updateWalletDto.Name;
@@ -96,24 +118,36 @@ public class WalletService : IWalletService
     var wallet = await _walletRepository.GetByIdAsync(id);
     if (wallet == null || wallet.UserId != userId)
     {
-      throw new InvalidOperationException("Carteira não encontrada");
+      throw new AppException("Carteira não encontrada");
     }
 
     _walletRepository.Remove(wallet);
     await _walletRepository.SaveChangesAsync();
   }
 
-  public async Task<decimal> GetTotalBalanceAsync(int userId)
+  public async Task<TotalBalanceDTO> GetTotalBalanceAsync(int userId)
   {
-    return await _walletRepository.GetTotalBalanceAsync(userId);
+    var wallets = await _walletRepository.GetUserWalletsAsync(userId, new WalletFilterDTO { PageSize = int.MaxValue });
+    var totalBalance = wallets.Item1.Sum(w => w.Balance);
+
+    return new TotalBalanceDTO
+    {
+      TotalBalance = totalBalance,
+      Wallets = wallets.Item1.Select(w => new WalletBalanceDTO
+      {
+        Id = w.Id,
+        Name = w.Name,
+        Balance = w.Balance
+      }).ToList()
+    };
   }
 
   public async Task<WalletTransferInfoDTO> GetWalletTransferInfoAsync(int walletId)
   {
-    var wallet = await _walletRepository.GetByIdAsync(walletId);
+    var wallet = await _walletRepository.GetByIdWithUserAsync(walletId);
     if (wallet == null)
     {
-      throw new InvalidOperationException("Carteira não encontrada");
+      throw new AppException("Carteira não encontrada");
     }
 
     return new WalletTransferInfoDTO
@@ -121,9 +155,42 @@ public class WalletService : IWalletService
       WalletId = wallet.Id,
       WalletName = wallet.Name,
       OwnerName = wallet.User.Name,
-      OwnerEmail = wallet.User.Email,
-      OwnerCPF = wallet.User.CPF,
       CreatedAt = wallet.CreatedAt
     };
+  }
+
+  public async Task<IEnumerable<WalletTransferInfoDTO>> GetWalletTransferInfoByEmailAsync(string email)
+  {
+    var wallets = await _walletRepository.GetByUserEmailAsync(email);
+    if (!wallets.Any())
+    {
+      throw new AppException("Nenhuma carteira encontrada para o email informado");
+    }
+
+    return wallets.Select(wallet => new WalletTransferInfoDTO
+    {
+      WalletId = wallet.Id,
+      WalletName = wallet.Name,
+      OwnerName = wallet.User.Name,
+
+      CreatedAt = wallet.CreatedAt
+    });
+  }
+
+  public async Task<IEnumerable<WalletTransferInfoDTO>> GetWalletTransferInfoByCPFAsync(string cpf)
+  {
+    var wallets = await _walletRepository.GetByUserCPFAsync(cpf);
+    if (!wallets.Any())
+    {
+      throw new AppException("Nenhuma carteira encontrada para o CPF informado");
+    }
+
+    return wallets.Select(wallet => new WalletTransferInfoDTO
+    {
+      WalletId = wallet.Id,
+      WalletName = wallet.Name,
+      OwnerName = wallet.User.Name,
+      CreatedAt = wallet.CreatedAt
+    });
   }
 }

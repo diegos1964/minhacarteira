@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MinhaCarteira.API.DTOs;
 using MinhaCarteira.API.Services;
+using MinhaCarteira.API.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace MinhaCarteira.API.Controllers;
 
@@ -11,33 +13,57 @@ namespace MinhaCarteira.API.Controllers;
 public class WalletController : ControllerBase
 {
   private readonly IWalletService _walletService;
+  private readonly ILogger<WalletController> _logger;
 
-  public WalletController(IWalletService walletService)
+  public WalletController(IWalletService walletService, ILogger<WalletController> logger)
   {
     _walletService = walletService;
+    _logger = logger;
   }
 
   [HttpGet]
+  [ProducesResponseType(typeof(ApiResponse<PaginatedResultDTO<WalletDTO>>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<ApiResponse<PaginatedResultDTO<WalletDTO>>>> GetWallets([FromQuery] WalletFilterDTO? filter)
   {
-    var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
-    var wallets = await _walletService.GetUserWalletsAsync(userId, filter ?? new WalletFilterDTO());
-    return Ok(ApiResponse<PaginatedResultDTO<WalletDTO>>.CreateSuccess(wallets, "Carteiras recuperadas com sucesso"));
+    try
+    {
+      var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
+      var wallets = await _walletService.GetUserWalletsAsync(userId, filter ?? new WalletFilterDTO());
+      return Ok(ApiResponse<PaginatedResultDTO<WalletDTO>>.CreateSuccess(wallets, "Carteiras recuperadas com sucesso"));
+    }
+    catch (Exception ex)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
+    }
   }
 
   [HttpGet("{id}")]
+  [ProducesResponseType(typeof(ApiResponse<WalletDTO>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<ApiResponse<WalletDTO>>> GetWallet(int id)
   {
-    var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
-    var wallet = await _walletService.GetWalletAsync(id, userId);
-    if (wallet == null)
+    try
     {
-      return NotFound(ApiResponse<WalletDTO>.CreateError("Carteira não encontrada"));
+      var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
+      var wallet = await _walletService.GetWalletAsync(id, userId);
+      if (wallet == null)
+      {
+        return NotFound(ApiResponse<object>.CreateError("Carteira não encontrada"));
+      }
+      return Ok(ApiResponse<WalletDTO>.CreateSuccess(wallet, "Carteira recuperada com sucesso"));
     }
-    return Ok(ApiResponse<WalletDTO>.CreateSuccess(wallet, "Carteira recuperada com sucesso"));
+    catch (Exception ex)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
+    }
   }
 
   [HttpPost]
+  [ProducesResponseType(typeof(ApiResponse<WalletDTO>), StatusCodes.Status201Created)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<ApiResponse<WalletDTO>>> CreateWallet(CreateWalletDTO createWalletDto)
   {
     try
@@ -50,13 +76,20 @@ public class WalletController : ControllerBase
         ApiResponse<WalletDTO>.CreateSuccess(wallet, "Carteira criada com sucesso")
       );
     }
-    catch (InvalidOperationException ex)
+    catch (AppException ex)
     {
-      return BadRequest(ApiResponse<WalletDTO>.CreateError(ex.Message));
+      return BadRequest(ApiResponse<object>.CreateError(ex.Message));
+    }
+    catch (Exception ex)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
     }
   }
 
-  [HttpPut("{id}")]
+  [HttpPatch("{id}")]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<ApiResponse<object>>> UpdateWallet(int id, UpdateWalletDTO updateWalletDto)
   {
     try
@@ -69,9 +102,16 @@ public class WalletController : ControllerBase
     {
       return BadRequest(ApiResponse<object>.CreateError(ex.Message));
     }
+    catch (Exception ex)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
+    }
   }
 
   [HttpDelete("{id}")]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<ApiResponse<object>>> DeleteWallet(int id)
   {
     try
@@ -84,17 +124,33 @@ public class WalletController : ControllerBase
     {
       return BadRequest(ApiResponse<object>.CreateError(ex.Message));
     }
+    catch (Exception ex)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
+    }
   }
 
   [HttpGet("balance")]
-  public async Task<ActionResult<ApiResponse<decimal>>> GetTotalBalance()
+  [ProducesResponseType(typeof(ApiResponse<TotalBalanceDTO>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+  public async Task<ActionResult<ApiResponse<TotalBalanceDTO>>> GetTotalBalance()
   {
-    var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
-    var balance = await _walletService.GetTotalBalanceAsync(userId);
-    return Ok(ApiResponse<decimal>.CreateSuccess(balance, "Saldo total recuperado com sucesso"));
+    try
+    {
+      var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
+      var balance = await _walletService.GetTotalBalanceAsync(userId);
+      return Ok(ApiResponse<TotalBalanceDTO>.CreateSuccess(balance, "Saldo total recuperado com sucesso"));
+    }
+    catch (Exception ex)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
+    }
   }
 
   [HttpGet("transfer-info/{walletId}")]
+  [ProducesResponseType(typeof(ApiResponse<WalletTransferInfoDTO>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<ApiResponse<WalletTransferInfoDTO>>> GetWalletTransferInfo(int walletId)
   {
     try
@@ -104,7 +160,55 @@ public class WalletController : ControllerBase
     }
     catch (InvalidOperationException ex)
     {
-      return BadRequest(ApiResponse<WalletTransferInfoDTO>.CreateError(ex.Message));
+      return BadRequest(ApiResponse<object>.CreateError(ex.Message));
+    }
+    catch (Exception ex)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
+    }
+  }
+
+  [HttpGet("transfer-info/email/{email}")]
+  [ProducesResponseType(typeof(ApiResponse<IEnumerable<WalletTransferInfoDTO>>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+  public async Task<IActionResult> GetWalletTransferInfoByEmail(string email)
+  {
+    try
+    {
+      var wallets = await _walletService.GetWalletTransferInfoByEmailAsync(email);
+      return Ok(ApiResponse<IEnumerable<WalletTransferInfoDTO>>.CreateSuccess(wallets));
+    }
+    catch (AppException ex)
+    {
+      return NotFound(ApiResponse<object>.CreateError(ex.Message));
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Erro ao buscar carteiras por email");
+      return StatusCode(500, ApiResponse<IEnumerable<WalletTransferInfoDTO>>.CreateError("Erro interno do servidor"));
+    }
+  }
+
+  [HttpGet("transfer-info/cpf/{cpf}")]
+  [ProducesResponseType(typeof(ApiResponse<IEnumerable<WalletTransferInfoDTO>>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+  public async Task<IActionResult> GetWalletTransferInfoByCPF(string cpf)
+  {
+    try
+    {
+      var wallets = await _walletService.GetWalletTransferInfoByCPFAsync(cpf);
+      return Ok(ApiResponse<IEnumerable<WalletTransferInfoDTO>>.CreateSuccess(wallets));
+    }
+    catch (AppException ex)
+    {
+      return NotFound(ApiResponse<object>.CreateError(ex.Message));
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Erro ao buscar carteiras por CPF");
+      return StatusCode(500, ApiResponse<object>.CreateError("Erro interno do servidor"));
     }
   }
 }

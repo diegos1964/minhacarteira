@@ -68,4 +68,20 @@ public class WalletRepository : BaseRepository<Wallet>, IWalletRepository
 
     return (items, totalCount);
   }
+
+  public async Task<IEnumerable<Wallet>> GetByUserEmailAsync(string email)
+  {
+    return await _dbSet
+        .Include(w => w.User)
+        .Where(w => w.User.Email == email)
+        .ToListAsync();
+  }
+
+  public async Task<IEnumerable<Wallet>> GetByUserCPFAsync(string cpf)
+  {
+    return await _dbSet
+        .Include(w => w.User)
+        .Where(w => w.User.CPF == cpf)
+        .ToListAsync();
+  }
 }

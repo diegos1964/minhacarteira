@@ -14,4 +14,6 @@ public interface IWalletRepository : IBaseRepository<Wallet>
   Task<decimal> GetTotalBalanceAsync(int userId);
   Task<Wallet?> GetByIdWithUserAsync(int id);
   Task<Wallet?> GetByIdAndUserIdAsync(int id, int userId);
+  Task<IEnumerable<Wallet>> GetByUserEmailAsync(string email);
+  Task<IEnumerable<Wallet>> GetByUserCPFAsync(string cpf);
 }

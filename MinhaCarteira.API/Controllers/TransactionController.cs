@@ -18,26 +18,48 @@ public class TransactionController : ControllerBase
   }
 
   [HttpGet]
+  [ProducesResponseType(typeof(ApiResponse<PaginatedResultDTO<TransactionDTO>>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<ApiResponse<PaginatedResultDTO<TransactionDTO>>>> GetTransactions([FromQuery] TransactionFilterDTO? filter)
   {
-    var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
-    var transactions = await _transactionService.GetUserTransactionsAsync(userId, filter ?? new TransactionFilterDTO());
-    return Ok(ApiResponse<PaginatedResultDTO<TransactionDTO>>.CreateSuccess(transactions, "Transações recuperadas com sucesso"));
+    try
+    {
+      var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
+      var transactions = await _transactionService.GetUserTransactionsAsync(userId, filter ?? new TransactionFilterDTO());
+      return Ok(ApiResponse<PaginatedResultDTO<TransactionDTO>>.CreateSuccess(transactions, "Transações recuperadas com sucesso"));
+    }
+    catch (Exception)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
+    }
   }
 
   [HttpGet("{id}")]
+  [ProducesResponseType(typeof(ApiResponse<TransactionDTO>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<ApiResponse<TransactionDTO>>> GetTransaction(int id)
   {
-    var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
-    var transaction = await _transactionService.GetTransactionAsync(id, userId);
-    if (transaction == null)
+    try
     {
-      return NotFound(ApiResponse<TransactionDTO>.CreateError("Transação não encontrada"));
+      var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
+      var transaction = await _transactionService.GetTransactionAsync(id, userId);
+      if (transaction == null)
+      {
+        return NotFound(ApiResponse<object>.CreateError("Transação não encontrada"));
+      }
+      return Ok(ApiResponse<TransactionDTO>.CreateSuccess(transaction, "Transação recuperada com sucesso"));
     }
-    return Ok(ApiResponse<TransactionDTO>.CreateSuccess(transaction, "Transação recuperada com sucesso"));
+    catch (Exception)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
+    }
   }
 
   [HttpPost]
+  [ProducesResponseType(typeof(ApiResponse<TransactionDTO>), StatusCodes.Status201Created)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<ApiResponse<TransactionDTO>>> CreateTransaction([FromBody] CreateTransactionDTO createTransactionDto)
   {
     try
@@ -52,11 +74,18 @@ public class TransactionController : ControllerBase
     }
     catch (InvalidOperationException ex)
     {
-      return BadRequest(ApiResponse<TransactionDTO>.CreateError(ex.Message));
+      return BadRequest(ApiResponse<object>.CreateError(ex.Message));
+    }
+    catch (Exception)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
     }
   }
 
   [HttpPatch("{id}")]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<ApiResponse<object>>> UpdateTransaction(int id, [FromBody] UpdateTransactionDTO updateTransactionDto)
   {
     try
@@ -69,9 +98,16 @@ public class TransactionController : ControllerBase
     {
       return BadRequest(ApiResponse<object>.CreateError(ex.Message));
     }
+    catch (Exception)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
+    }
   }
 
   [HttpDelete("{id}")]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<ApiResponse<object>>> DeleteTransaction(int id)
   {
     try
@@ -84,9 +120,16 @@ public class TransactionController : ControllerBase
     {
       return BadRequest(ApiResponse<object>.CreateError(ex.Message));
     }
+    catch (Exception)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
+    }
   }
 
   [HttpGet("wallet/{walletId}/income")]
+  [ProducesResponseType(typeof(ApiResponse<WalletIncomeDTO>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<ApiResponse<WalletIncomeDTO>>> GetTotalIncome(int walletId)
   {
     try
@@ -96,11 +139,18 @@ public class TransactionController : ControllerBase
     }
     catch (InvalidOperationException ex)
     {
-      return BadRequest(ApiResponse<WalletIncomeDTO>.CreateError(ex.Message));
+      return BadRequest(ApiResponse<object>.CreateError(ex.Message));
+    }
+    catch (Exception)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
     }
   }
 
   [HttpGet("wallet/{walletId}/expense")]
+  [ProducesResponseType(typeof(ApiResponse<WalletExpenseDTO>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<ApiResponse<WalletExpenseDTO>>> GetTotalExpense(int walletId)
   {
     try
@@ -110,22 +160,37 @@ public class TransactionController : ControllerBase
     }
     catch (InvalidOperationException ex)
     {
-      return BadRequest(ApiResponse<WalletExpenseDTO>.CreateError(ex.Message));
+      return BadRequest(ApiResponse<object>.CreateError(ex.Message));
+    }
+    catch (Exception)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
     }
   }
 
   [HttpPost("transfer")]
-  public async Task<ActionResult<TransactionDTO>> CreateTransfer(TransferDTO transferDto)
+  [ProducesResponseType(typeof(ApiResponse<TransactionDTO>), StatusCodes.Status201Created)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+  public async Task<ActionResult<ApiResponse<TransactionDTO>>> CreateTransfer(TransferDTO transferDto)
   {
     try
     {
       var userId = int.Parse(User.FindFirst("id")?.Value ?? "0");
       var transaction = await _transactionService.TransferAsync(userId, transferDto);
-      return CreatedAtAction(nameof(GetTransaction), new { id = transaction.Id }, transaction);
+      return CreatedAtAction(
+          nameof(GetTransaction),
+          new { id = transaction.Id },
+          ApiResponse<TransactionDTO>.CreateSuccess(transaction, "Transferência realizada com sucesso")
+      );
     }
     catch (InvalidOperationException ex)
     {
-      return BadRequest(new { message = ex.Message });
+      return BadRequest(ApiResponse<object>.CreateError(ex.Message));
+    }
+    catch (Exception)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
     }
   }
 }
