@@ -89,6 +89,12 @@ Cada usuário possui duas carteiras:
 ### Autenticação
 - `POST /api/auth/register` - Registro de novo usuário
   - Body: `{ "name": "string", "email": "string", "password": "string", "confirmPassword": "string", "cpf": "string" }`
+  - Requisitos da senha:
+    - Mínimo de 8 caracteres
+    - Pelo menos uma letra maiúscula
+    - Pelo menos uma letra minúscula
+    - Pelo menos um número
+    - Pelo menos um caractere especial
   - Resposta: `{ "success": true, "data": { "token": "string", "user": { "id": number, "name": "string", "email": "string", "cpf": "string" } } }`
 - `POST /api/auth/login` - Login de usuário
   - Body: `{ "email": "string", "password": "string" }`
@@ -174,8 +180,6 @@ A API possui três interfaces de documentação:
 
 3. **Scalar**: Interface moderna e interativa
    - URL: https://localhost:7266/scalar
-
-
 
 ## Testes
 

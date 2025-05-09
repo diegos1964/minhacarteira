@@ -28,6 +28,16 @@ public class AuthController : ControllerBase
   {
     try
     {
+      if (!ModelState.IsValid)
+      {
+        var errors = ModelState.Values
+          .SelectMany(v => v.Errors)
+          .Select(e => e.ErrorMessage)
+          .ToList();
+
+        return BadRequest(ApiResponse<object>.CreateError(string.Join(", ", errors)));
+      }
+
       var result = await _authService.RegisterAsync(registerDto);
       return Ok(ApiResponse<AuthResponseDTO>.CreateSuccess(result, "Usuário registrado com sucesso"));
     }
@@ -50,6 +60,16 @@ public class AuthController : ControllerBase
   {
     try
     {
+      if (!ModelState.IsValid)
+      {
+        var errors = ModelState.Values
+          .SelectMany(v => v.Errors)
+          .Select(e => e.ErrorMessage)
+          .ToList();
+
+        return BadRequest(ApiResponse<object>.CreateError(string.Join(", ", errors)));
+      }
+
       var result = await _authService.LoginAsync(loginDto);
       return Ok(ApiResponse<AuthResponseDTO>.CreateSuccess(result, "Login realizado com sucesso"));
     }
@@ -84,6 +104,5 @@ public class AuthController : ControllerBase
     {
       return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
     }
-
   }
 }

@@ -34,7 +34,7 @@ public class WalletController : ControllerBase
       var wallets = await _walletService.GetUserWalletsAsync(userId, filter ?? new WalletFilterDTO());
       return Ok(ApiResponse<PaginatedResultDTO<WalletDTO>>.CreateSuccess(wallets, "Carteiras recuperadas com sucesso"));
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
     }
@@ -56,7 +56,7 @@ public class WalletController : ControllerBase
       }
       return Ok(ApiResponse<WalletDTO>.CreateSuccess(wallet, "Carteira recuperada com sucesso"));
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
     }
@@ -82,7 +82,7 @@ public class WalletController : ControllerBase
     {
       return BadRequest(ApiResponse<object>.CreateError(ex.Message));
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
     }
@@ -104,7 +104,7 @@ public class WalletController : ControllerBase
     {
       return BadRequest(ApiResponse<object>.CreateError(ex.Message));
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
     }
@@ -126,7 +126,7 @@ public class WalletController : ControllerBase
     {
       return BadRequest(ApiResponse<object>.CreateError(ex.Message));
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
     }
@@ -143,7 +143,7 @@ public class WalletController : ControllerBase
       var balance = await _walletService.GetTotalBalanceAsync(userId);
       return Ok(ApiResponse<TotalBalanceDTO>.CreateSuccess(balance, "Saldo total recuperado com sucesso"));
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
     }
@@ -164,7 +164,7 @@ public class WalletController : ControllerBase
     {
       return BadRequest(ApiResponse<object>.CreateError(ex.Message));
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
     }

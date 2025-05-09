@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
+using MinhaCarteira.API.Validations;
 
 namespace MinhaCarteira.API.DTOs.Auth;
 
@@ -14,12 +16,13 @@ public class RegisterDTO
   public string Email { get; set; } = string.Empty;
 
   [Required(ErrorMessage = "O CPF é obrigatório")]
-  [StringLength(11, MinimumLength = 11, ErrorMessage = "O CPF deve conter 11 dígitos")]
-  [RegularExpression(@"^\d{11}$", ErrorMessage = "O CPF deve conter apenas números")]
+  [CPF(ErrorMessage = "CPF inválido")]
   public string CPF { get; set; } = string.Empty;
 
   [Required(ErrorMessage = "A senha é obrigatória")]
-  [StringLength(100, MinimumLength = 6, ErrorMessage = "A senha deve ter entre 6 e 100 caracteres")]
+  [StringLength(100, MinimumLength = 8, ErrorMessage = "A senha deve ter entre 8 e 100 caracteres")]
+  [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$",
+    ErrorMessage = "A senha deve conter pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial")]
   public string Password { get; set; } = string.Empty;
 
   [Required(ErrorMessage = "A confirmação de senha é obrigatória")]
