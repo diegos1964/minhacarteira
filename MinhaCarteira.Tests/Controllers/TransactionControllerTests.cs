@@ -4,9 +4,13 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using MinhaCarteira.API.Controllers;
-using MinhaCarteira.API.DTOs;
+using MinhaCarteira.API.DTOs.Reponses;
+using MinhaCarteira.API.DTOs.Transaction;
+using MinhaCarteira.API.Exceptions;
 using MinhaCarteira.API.Models;
+using MinhaCarteira.API.Services;
 using Moq;
 using Xunit;
 
@@ -14,45 +18,116 @@ namespace MinhaCarteira.Tests.Controllers
 {
   public class TransactionControllerTests : TestBase
   {
+    private readonly Mock<ITransactionService> _mockTransactionService;
+    private readonly Mock<ILogger<TransactionController>> _mockLogger;
     private readonly TransactionController _controller;
 
     public TransactionControllerTests()
     {
-      _controller = new TransactionController(TransactionService.Object);
+      _mockTransactionService = new Mock<ITransactionService>();
+      _mockLogger = new Mock<ILogger<TransactionController>>();
+      _controller = new TransactionController(_mockTransactionService.Object);
 
       // Setup controller user claims
       var claims = new List<Claim>
             {
-                new Claim("id", TestUser.Id.ToString())
+                new Claim("id", TestUser.Id.ToString()),
+                new Claim(ClaimTypes.Email, TestUser.Email)
             };
-      var identity = new ClaimsIdentity(claims);
+      var identity = new ClaimsIdentity(claims, "TestAuth");
       var claimsPrincipal = new ClaimsPrincipal(identity);
+
       _controller.ControllerContext = new ControllerContext
       {
         HttpContext = new DefaultHttpContext { User = claimsPrincipal }
       };
+    }
 
-      // Setup mock behaviors
-      var testTransactionDto = new TransactionDTO
+    [Fact]
+    public async Task GetTransactions_ValidRequest_ReturnsOkResult()
+    {
+      // Arrange
+      var filter = new TransactionFilterDTO { PageNumber = 1, PageSize = 10 };
+      var expectedResponse = new PaginatedResultDTO<TransactionDTO>
+      {
+        Items = new List<TransactionDTO>
+                {
+                    new TransactionDTO
+                    {
+                        Id = 1,
+                        Description = "Test Transaction",
+                        Amount = 100m,
+                        Type = TransactionType.Income.ToString(),
+                        Date = DateTime.UtcNow,
+                        WalletId = TestWallet.Id,
+                        WalletName = TestWallet.Name,
+                        CreatedAt = DateTime.UtcNow
+                    }
+                },
+        TotalItems = 1,
+        PageNumber = 1,
+        PageSize = 10,
+        TotalPages = 1
+      };
+
+      _mockTransactionService.Setup(x => x.GetUserTransactionsAsync(TestUser.Id, It.IsAny<TransactionFilterDTO>()))
+          .ReturnsAsync(expectedResponse);
+
+      // Act
+      var result = await _controller.GetTransactions(filter);
+
+      // Assert
+      var okResult = Assert.IsType<OkObjectResult>(result.Result);
+      var response = Assert.IsType<ApiResponse<PaginatedResultDTO<TransactionDTO>>>(okResult.Value);
+      Assert.True(response.Success);
+      Assert.NotNull(response.Data);
+      Assert.Single(response.Data.Items);
+    }
+
+    [Fact]
+    public async Task GetTransaction_ExistingTransaction_ReturnsOkResult()
+    {
+      // Arrange
+      var transactionDto = new TransactionDTO
       {
         Id = 1,
         Description = "Test Transaction",
-        Amount = 100,
-        Type = TransactionType.Expense.ToString(),
+        Amount = 100m,
+        Type = TransactionType.Income.ToString(),
+        Date = DateTime.UtcNow,
         WalletId = TestWallet.Id,
         WalletName = TestWallet.Name,
-        Date = DateTime.UtcNow,
         CreatedAt = DateTime.UtcNow
       };
 
-      TransactionService.Setup(x => x.CreateTransactionAsync(It.IsAny<CreateTransactionDTO>(), TestUser.Id))
-          .ReturnsAsync(testTransactionDto);
+      _mockTransactionService.Setup(x => x.GetTransactionAsync(1, TestUser.Id))
+          .ReturnsAsync(transactionDto);
 
-      TransactionService.Setup(x => x.GetUserTransactionsAsync(TestUser.Id, It.IsAny<TransactionFilterDTO>()))
-          .ReturnsAsync(new List<TransactionDTO> { testTransactionDto });
+      // Act
+      var result = await _controller.GetTransaction(1);
 
-      TransactionService.Setup(x => x.GetTransactionAsync(testTransactionDto.Id, TestUser.Id))
-          .ReturnsAsync(testTransactionDto);
+      // Assert
+      var okResult = Assert.IsType<OkObjectResult>(result.Result);
+      var response = Assert.IsType<ApiResponse<TransactionDTO>>(okResult.Value);
+      Assert.True(response.Success);
+      Assert.NotNull(response.Data);
+      Assert.Equal(1, response.Data.Id);
+    }
+
+    [Fact]
+    public async Task GetTransaction_NonExistingTransaction_ReturnsNotFound()
+    {
+      // Arrange
+      _mockTransactionService.Setup(x => x.GetTransactionAsync(It.IsAny<int>(), TestUser.Id))
+          .ReturnsAsync((TransactionDTO?)null);
+
+      // Act
+      var result = await _controller.GetTransaction(999);
+
+      // Assert
+      var notFoundResult = Assert.IsType<NotFoundObjectResult>(result.Result);
+      var response = Assert.IsType<ApiResponse<object>>(notFoundResult.Value);
+      Assert.False(response.Success);
     }
 
     [Fact]
@@ -61,141 +136,106 @@ namespace MinhaCarteira.Tests.Controllers
       // Arrange
       var createDto = new CreateTransactionDTO
       {
-        Description = "Test Transaction",
-        Amount = 100,
-        Type = TransactionType.Expense,
-        WalletId = TestWallet.Id
+        Description = "New Transaction",
+        Amount = 100m,
+        Type = TransactionType.Income.ToString(),
+        WalletId = TestWallet.Id,
+        Date = DateTime.UtcNow
       };
+
+      var createdTransaction = new TransactionDTO
+      {
+        Id = 2,
+        Description = createDto.Description,
+        Amount = createDto.Amount,
+        Type = createDto.Type,
+        WalletId = createDto.WalletId,
+        WalletName = TestWallet.Name,
+        Date = createDto.Date,
+        CreatedAt = DateTime.UtcNow
+      };
+
+      _mockTransactionService.Setup(x => x.CreateTransactionAsync(createDto, TestUser.Id))
+          .ReturnsAsync(createdTransaction);
 
       // Act
       var result = await _controller.CreateTransaction(createDto);
 
       // Assert
-      var actionResult = Assert.IsType<ActionResult<TransactionDTO>>(result);
-      var createdResult = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
-      var transaction = Assert.IsType<TransactionDTO>(createdResult.Value);
-      Assert.Equal(createDto.Description, transaction.Description);
-      Assert.Equal(createDto.Amount, transaction.Amount);
-      Assert.Equal(createDto.Type.ToString(), transaction.Type);
+      var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+      var response = Assert.IsType<ApiResponse<TransactionDTO>>(createdResult.Value);
+      Assert.True(response.Success);
+      Assert.NotNull(response.Data);
+      Assert.Equal(createDto.Description, response.Data.Description);
+      Assert.Equal(createDto.Amount, response.Data.Amount);
     }
 
     [Fact]
-    public async Task GetTransactions_ReturnsUserTransactions()
+    public async Task UpdateTransaction_ValidData_ReturnsOkResult()
     {
       // Arrange
-      var filter = new TransactionFilterDTO
-      {
-        StartDate = DateTime.UtcNow.AddDays(-30),
-        EndDate = DateTime.UtcNow,
-        Type = null,
-        WalletId = null
-      };
+      var updateDto = new UpdateTransactionDTO { Description = "Updated Transaction" };
+
+      _mockTransactionService.Setup(x => x.UpdateTransactionAsync(1, updateDto, TestUser.Id))
+          .Returns(Task.CompletedTask);
 
       // Act
-      var result = await _controller.GetTransactions(filter);
+      var result = await _controller.UpdateTransaction(1, updateDto);
 
       // Assert
-      var actionResult = Assert.IsType<ActionResult<IEnumerable<TransactionDTO>>>(result);
-      var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
-      var transactions = Assert.IsType<List<TransactionDTO>>(okResult.Value);
-      Assert.Single(transactions);
+      var okResult = Assert.IsType<OkObjectResult>(result.Result);
+      var response = Assert.IsType<ApiResponse<object>>(okResult.Value);
+      Assert.True(response.Success);
     }
 
     [Fact]
-    public async Task GetTransaction_ExistingTransaction_ReturnsTransaction()
+    public async Task UpdateTransaction_NonExistingTransaction_ReturnsBadRequest()
     {
       // Arrange
-      var transactionId = 1;
+      var updateDto = new UpdateTransactionDTO { Description = "Updated Transaction" };
+
+      _mockTransactionService.Setup(x => x.UpdateTransactionAsync(999, updateDto, TestUser.Id))
+          .ThrowsAsync(new InvalidOperationException("Transação não encontrada"));
 
       // Act
-      var result = await _controller.GetTransaction(transactionId);
+      var result = await _controller.UpdateTransaction(999, updateDto);
 
       // Assert
-      var actionResult = Assert.IsType<ActionResult<TransactionDTO>>(result);
-      var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
-      var returnedTransaction = Assert.IsType<TransactionDTO>(okResult.Value);
-      Assert.Equal(transactionId, returnedTransaction.Id);
+      var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+      var response = Assert.IsType<ApiResponse<object>>(badRequestResult.Value);
+      Assert.False(response.Success);
     }
 
     [Fact]
-    public async Task GetTransaction_NonExistingTransaction_ReturnsNotFound()
+    public async Task DeleteTransaction_ExistingTransaction_ReturnsOkResult()
     {
       // Arrange
-      TransactionService.Setup(x => x.GetTransactionAsync(999, TestUser.Id))
-          .ReturnsAsync((TransactionDTO)null);
+      _mockTransactionService.Setup(x => x.DeleteTransactionAsync(1, TestUser.Id))
+          .Returns(Task.CompletedTask);
 
       // Act
-      var result = await _controller.GetTransaction(999);
+      var result = await _controller.DeleteTransaction(1);
 
       // Assert
-      var actionResult = Assert.IsType<ActionResult<TransactionDTO>>(result);
-      Assert.IsType<NotFoundResult>(actionResult.Result);
+      var okResult = Assert.IsType<OkObjectResult>(result.Result);
+      var response = Assert.IsType<ApiResponse<object>>(okResult.Value);
+      Assert.True(response.Success);
     }
 
     [Fact]
-    public async Task UpdateTransaction_ValidData_ReturnsNoContent()
+    public async Task DeleteTransaction_NonExistingTransaction_ReturnsBadRequest()
     {
       // Arrange
-      var transactionId = 1;
-      var updateDto = new UpdateTransactionDTO
-      {
-        Description = "Updated Description"
-      };
+      _mockTransactionService.Setup(x => x.DeleteTransactionAsync(999, TestUser.Id))
+          .ThrowsAsync(new InvalidOperationException("Transação não encontrada"));
 
       // Act
-      var result = await _controller.UpdateTransaction(transactionId, updateDto);
+      var result = await _controller.DeleteTransaction(999);
 
       // Assert
-      Assert.IsType<NoContentResult>(result);
-    }
-
-    [Fact]
-    public async Task DeleteTransaction_ExistingTransaction_ReturnsNoContent()
-    {
-      // Arrange
-      var transactionId = 1;
-
-      // Act
-      var result = await _controller.DeleteTransaction(transactionId);
-
-      // Assert
-      Assert.IsType<NoContentResult>(result);
-    }
-
-    [Fact]
-    public async Task GetTotalIncome_ReturnsAmount()
-    {
-      // Arrange
-      var walletId = 1;
-      TransactionService.Setup(x => x.GetTotalIncomeAsync(walletId))
-          .ReturnsAsync(500m);
-
-      // Act
-      var result = await _controller.GetTotalIncome(walletId);
-
-      // Assert
-      var actionResult = Assert.IsType<ActionResult<decimal>>(result);
-      var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
-      var amount = Assert.IsType<decimal>(okResult.Value);
-      Assert.Equal(500m, amount);
-    }
-
-    [Fact]
-    public async Task GetTotalExpense_ReturnsAmount()
-    {
-      // Arrange
-      var walletId = 1;
-      TransactionService.Setup(x => x.GetTotalExpenseAsync(walletId))
-          .ReturnsAsync(300m);
-
-      // Act
-      var result = await _controller.GetTotalExpense(walletId);
-
-      // Assert
-      var actionResult = Assert.IsType<ActionResult<decimal>>(result);
-      var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
-      var amount = Assert.IsType<decimal>(okResult.Value);
-      Assert.Equal(300m, amount);
+      var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+      var response = Assert.IsType<ApiResponse<object>>(badRequestResult.Value);
+      Assert.False(response.Success);
     }
 
     [Fact]
@@ -206,35 +246,75 @@ namespace MinhaCarteira.Tests.Controllers
       {
         SourceWalletId = TestWallet.Id,
         DestinationWalletId = 2,
-        Amount = 100,
+        Amount = 100m,
         Description = "Test Transfer"
       };
 
-      var transferTransactionDto = new TransactionDTO
+      var createdTransaction = new TransactionDTO
       {
         Id = 1,
-        Description = $"Transferência para Wallet 2: Test Transfer",
-        Amount = 100,
+        Description = transferDto.Description,
+        Amount = transferDto.Amount,
         Type = TransactionType.Transfer.ToString(),
-        WalletId = TestWallet.Id,
+        WalletId = transferDto.SourceWalletId,
         WalletName = TestWallet.Name,
         Date = DateTime.UtcNow,
         CreatedAt = DateTime.UtcNow
       };
 
-      TransactionService.Setup(x => x.CreateTransferAsync(transferDto, TestUser.Id))
-          .ReturnsAsync(transferTransactionDto);
+      _mockTransactionService.Setup(x => x.TransferAsync(TestUser.Id, transferDto))
+          .ReturnsAsync(createdTransaction);
 
       // Act
       var result = await _controller.CreateTransfer(transferDto);
 
       // Assert
-      var actionResult = Assert.IsType<ActionResult<TransactionDTO>>(result);
-      var createdResult = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
-      var transaction = Assert.IsType<TransactionDTO>(createdResult.Value);
-      Assert.Equal(transferTransactionDto.Description, transaction.Description);
-      Assert.Equal(transferTransactionDto.Amount, transaction.Amount);
-      Assert.Equal(transferTransactionDto.Type, transaction.Type);
+      var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+      var response = Assert.IsType<ApiResponse<TransactionDTO>>(createdResult.Value);
+      Assert.True(response.Success);
+      Assert.NotNull(response.Data);
+      Assert.Equal(transferDto.Amount, response.Data.Amount);
+    }
+
+    [Fact]
+    public async Task CreateTransfer_InvalidData_ReturnsBadRequest()
+    {
+      // Arrange
+      var transferDto = new TransferDTO
+      {
+        SourceWalletId = TestWallet.Id,
+        DestinationWalletId = 2,
+        Amount = 100m,
+        Description = "Test Transfer"
+      };
+
+      _mockTransactionService.Setup(x => x.TransferAsync(TestUser.Id, transferDto))
+          .ThrowsAsync(new InvalidOperationException("Saldo insuficiente"));
+
+      // Act
+      var result = await _controller.CreateTransfer(transferDto);
+
+      // Assert
+      var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+      var response = Assert.IsType<ApiResponse<object>>(badRequestResult.Value);
+      Assert.False(response.Success);
+    }
+
+    [Fact]
+    public void GetTransactionTypes_ReturnsOkResult()
+    {
+      // Act
+      var result = _controller.GetTransactionTypes();
+
+      // Assert
+      var okResult = Assert.IsType<OkObjectResult>(result.Result);
+      var response = Assert.IsType<ApiResponse<TransactionTypesDTO>>(okResult.Value);
+      Assert.True(response.Success);
+      Assert.NotNull(response.Data);
+      Assert.NotEmpty(response.Data.Types);
+      Assert.Contains("Income", response.Data.Types);
+      Assert.Contains("Expense", response.Data.Types);
+      Assert.Contains("Transfer", response.Data.Types);
     }
   }
 }

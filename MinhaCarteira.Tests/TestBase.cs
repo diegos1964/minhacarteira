@@ -5,6 +5,8 @@ using MinhaCarteira.API.DTOs;
 using MinhaCarteira.API.Models;
 using MinhaCarteira.API.Services;
 using Moq;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace MinhaCarteira.Tests
 {
@@ -12,6 +14,7 @@ namespace MinhaCarteira.Tests
   {
     protected readonly ApplicationDbContext Context;
     protected readonly User TestUser;
+    protected readonly ClaimsPrincipal TestUserClaims;
     protected readonly Wallet TestWallet;
     protected readonly Mock<IAuthService> AuthService;
     protected readonly Mock<IWalletService> WalletService;
@@ -27,21 +30,18 @@ namespace MinhaCarteira.Tests
       Context = new ApplicationDbContext(options);
 
       // Setup test user
-      TestUser = new User
-      {
-        Id = 1,
-        Name = "Test User",
-        Email = "test@email.com",
-        PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456")
-      };
+      TestUser = new User("Test User", "test@example.com", "password123", "12345678900");
+      typeof(User).GetProperty("Id")?.SetValue(TestUser, 1);
 
       // Setup test wallet
       TestWallet = new Wallet
       {
         Id = 1,
         Name = "Test Wallet",
+        Balance = 1000.00m,
         UserId = TestUser.Id,
-        Balance = 1000
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow
       };
 
       // Setup mocks
@@ -53,6 +53,16 @@ namespace MinhaCarteira.Tests
       AuthService = new Mock<IAuthService>();
       WalletService = new Mock<IWalletService>();
       TransactionService = new Mock<ITransactionService>();
+
+      // Setup test user claims
+      var claims = new[]
+      {
+        new Claim("id", TestUser.Id.ToString()),
+        new Claim("email", TestUser.Email),
+        new Claim("name", TestUser.Name)
+      };
+
+      TestUserClaims = new ClaimsPrincipal(new ClaimsIdentity(claims, "Bearer"));
     }
 
     protected void Cleanup()
