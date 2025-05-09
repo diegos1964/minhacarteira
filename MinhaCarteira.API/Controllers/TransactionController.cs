@@ -4,6 +4,7 @@ using MinhaCarteira.API.Services;
 using MinhaCarteira.API.Models;
 using MinhaCarteira.API.DTOs.Transaction;
 using MinhaCarteira.API.DTOs.Reponses;
+using MinhaCarteira.API.DTOs.Wallet;
 
 namespace MinhaCarteira.API.Controllers;
 
