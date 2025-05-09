@@ -1,4 +1,3 @@
-using MinhaCarteira.API.DTOs;
 using MinhaCarteira.API.DTOs.Auth;
 using MinhaCarteira.API.Models;
 

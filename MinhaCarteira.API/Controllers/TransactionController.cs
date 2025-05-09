@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MinhaCarteira.API.DTOs;
 using MinhaCarteira.API.Services;
 using MinhaCarteira.API.Models;
+using MinhaCarteira.API.DTOs.Transaction;
+using MinhaCarteira.API.DTOs.Reponses;
 
 namespace MinhaCarteira.API.Controllers;
 

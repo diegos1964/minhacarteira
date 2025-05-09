@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using MinhaCarteira.API.Data;
-using MinhaCarteira.API.DTOs;
 using MinhaCarteira.API.DTOs.Auth;
 using MinhaCarteira.API.Models;
 using MinhaCarteira.API.Repositories;

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace MinhaCarteira.API.DTOs;
+namespace MinhaCarteira.API.DTOs.Transaction;
 
 public class TransactionFilterDTO
 {

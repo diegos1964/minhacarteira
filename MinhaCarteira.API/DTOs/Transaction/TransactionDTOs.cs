@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using MinhaCarteira.API.Models;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace MinhaCarteira.API.DTOs;
+namespace MinhaCarteira.API.DTOs.Transaction;
 
 public class CreateTransactionDTO
 {

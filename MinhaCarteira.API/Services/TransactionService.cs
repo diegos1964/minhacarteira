@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MinhaCarteira.API.Data;
-using MinhaCarteira.API.DTOs;
+using MinhaCarteira.API.DTOs.Reponses;
+using MinhaCarteira.API.DTOs.Transaction;
 using MinhaCarteira.API.Models;
 using MinhaCarteira.API.Repositories;
 

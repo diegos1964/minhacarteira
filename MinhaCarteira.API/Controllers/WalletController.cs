@@ -4,6 +4,8 @@ using MinhaCarteira.API.DTOs;
 using MinhaCarteira.API.Services;
 using MinhaCarteira.API.Exceptions;
 using Microsoft.Extensions.Logging;
+using MinhaCarteira.API.DTOs.Wallet;
+using MinhaCarteira.API.DTOs.Reponses;
 
 namespace MinhaCarteira.API.Controllers;
 

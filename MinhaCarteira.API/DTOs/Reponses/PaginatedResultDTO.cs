@@ -1,4 +1,4 @@
-namespace MinhaCarteira.API.DTOs
+namespace MinhaCarteira.API.DTOs.Reponses
 {
   public class PaginatedResultDTO<T>
   {

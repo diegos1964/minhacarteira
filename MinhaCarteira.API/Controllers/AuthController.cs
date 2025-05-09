@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MinhaCarteira.API.DTOs;
 using MinhaCarteira.API.DTOs.Auth;
 using MinhaCarteira.API.Services;
 using MinhaCarteira.API.Models;
 using BCrypt.Net;
+using MinhaCarteira.API.DTOs.Reponses;
 
 namespace MinhaCarteira.API.Controllers;
 

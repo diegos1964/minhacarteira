@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using MinhaCarteira.API.DTOs;
+using MinhaCarteira.API.DTOs.Reponses;
 
 public class ValidationFilterAttribute : ActionFilterAttribute
 {

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using MinhaCarteira.API.DTOs;
+using MinhaCarteira.API.DTOs.Transaction;
 using MinhaCarteira.API.Models;
 
 namespace MinhaCarteira.API.Repositories;
