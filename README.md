@@ -182,3 +182,94 @@ A API possui três interfaces de documentação:
 3. Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)
 4. Push para a branch (`git push origin feature/nova-feature`)
 5. Abra um Pull Request 
+
+## Testes
+
+O projeto possui uma suíte de testes automatizados usando xUnit e Moq para testar os controllers da API.
+
+### Estrutura dos Testes
+
+Os testes estão organizados no projeto `MinhaCarteira.Tests` e seguem a estrutura:
+
+```
+MinhaCarteira.Tests/
+├── Controllers/
+│   ├── AuthControllerTests.cs
+│   ├── TransactionControllerTests.cs
+│   └── WalletControllerTests.cs
+└── TestBase.cs
+```
+
+### Cobertura de Testes
+
+Os testes cobrem os seguintes cenários:
+
+#### AuthController
+- Registro de usuário
+- Login
+- Obtenção de informações do usuário logado
+
+#### WalletController
+- Listagem de carteiras
+- Obtenção de detalhes de carteira
+- Criação de carteira
+- Atualização de carteira
+- Exclusão de carteira
+- Consulta de saldo total
+- Informações para transferência
+
+#### TransactionController
+- Listagem de transações
+- Obtenção de detalhes de transação
+- Criação de transação
+- Atualização de transação
+- Exclusão de transação
+- Transferência entre carteiras
+- Tipos de transação disponíveis
+
+### Executando os Testes
+
+Para executar os testes, use o comando:
+
+```bash
+dotnet test
+```
+
+Para executar os testes com cobertura de código (requer o pacote `coverlet`):
+
+```bash
+dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=./lcov.info
+```
+
+### Padrões de Teste
+
+Os testes seguem o padrão AAA (Arrange-Act-Assert):
+- **Arrange**: Configuração do cenário de teste
+- **Act**: Execução da ação sendo testada
+- **Assert**: Verificação dos resultados
+
+Exemplo:
+```csharp
+[Fact]
+public async Task CreateTransaction_ValidData_ReturnsCreatedResult()
+{
+    // Arrange
+    var createDto = new CreateTransactionDTO { ... };
+    _mockTransactionService.Setup(...);
+
+    // Act
+    var result = await _controller.CreateTransaction(createDto);
+
+    // Assert
+    var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+    Assert.True(response.Success);
+}
+```
+
+### Dados de Teste
+
+Os testes utilizam dados de teste consistentes através da classe `TestBase`, que fornece:
+- Usuário de teste
+- Carteira de teste
+- Configuração de mocks
+- Setup de autenticação 
