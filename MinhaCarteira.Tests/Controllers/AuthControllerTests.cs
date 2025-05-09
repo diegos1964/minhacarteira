@@ -124,7 +124,7 @@ namespace MinhaCarteira.Tests.Controllers
 
     [Theory]
     [InlineData("", "O nome é obrigatório")]
-    [InlineData("A", "O nome deve ter no máximo 100 caracteres")]
+    [InlineData("Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat", "O nome deve ter no máximo 100 caracteres")]
     public async Task Register_InvalidName_ReturnsBadRequest(string name, string expectedError)
     {
       // Arrange
