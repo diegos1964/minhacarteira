@@ -147,9 +147,13 @@ Cada usuário possui duas carteiras:
   - Requer autenticação
   - Resposta: `{ "success": true, "data": { "id": number, "type": "Income|Expense", "amount": number, "description": "string", "walletId": number, "date": "date" } }`
 - `POST /api/transaction` - Cria uma nova transação
-  - Body: `{ "type": "Income|Expense", "amount": number, "description": "string", "walletId": number, "date": "date" }`
+  - Body: `{ "type": "Income|Expense", "amount": number, "description": "string", "walletId": number, "date": "date", "destinationWalletId": number? }`
   - Requer autenticação
   - Resposta: `{ "success": true, "data": { "id": number, "type": "Income|Expense", "amount": number, "description": "string", "walletId": number, "date": "date" } }`
+  - Notas:
+    - O campo `destinationWalletId` é opcional
+    - Se fornecido, a transação será criada como uma transferência entre carteiras
+    - Se não fornecido, a transação será criada como uma entrada ou saída normal
 - `PATCH /api/transaction/{id}` - Atualiza uma transação
   - Body: `{ "type": "Income|Expense", "amount": number, "description": "string", "date": "date" }`
   - Requer autenticação
