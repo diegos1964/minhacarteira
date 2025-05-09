@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MinhaCarteira.API.DTOs;
 using MinhaCarteira.API.Services;
+using MinhaCarteira.API.Models;
 
 namespace MinhaCarteira.API.Controllers;
 
@@ -187,6 +188,25 @@ public class TransactionController : ControllerBase
     catch (InvalidOperationException ex)
     {
       return BadRequest(ApiResponse<object>.CreateError(ex.Message));
+    }
+    catch (Exception)
+    {
+      return StatusCode(500, ApiResponse<object>.CreateError("Ocorreu um erro interno ao processar sua solicitação"));
+    }
+  }
+
+  [HttpGet("types")]
+  [ProducesResponseType(typeof(ApiResponse<TransactionTypesDTO>), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+  public ActionResult<ApiResponse<TransactionTypesDTO>> GetTransactionTypes()
+  {
+    try
+    {
+      var types = new TransactionTypesDTO
+      {
+        Types = Enum.GetNames(typeof(TransactionType))
+      };
+      return Ok(ApiResponse<TransactionTypesDTO>.CreateSuccess(types, "Tipos de transação recuperados com sucesso"));
     }
     catch (Exception)
     {
